@@ -327,6 +327,54 @@ body {
   margin-left: 0.25rem;
 }
 
+.stat-sublabel {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.1rem;
+}
+
+.split-alloc {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+}
+
+.alloc-tag {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.3rem;
+  font-weight: 600;
+}
+
+.alloc-tag.carryover {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.alloc-tag.contractual {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.alloc-tag.statutory {
+  background: #e8f5e9;
+  color: var(--color-primary);
+}
+
+.carryover-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  background: #f0faf0;
+  border: 1px solid var(--color-primary);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  margin-bottom: 0.75rem;
+}
+
 .stat-note.warning {
   color: var(--color-contractual);
 }

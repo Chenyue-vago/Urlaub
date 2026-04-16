@@ -30,6 +30,8 @@ export interface YearlyVacationStats {
   statutoryRemaining: number;  // 法定假期剩余
   contractualRemaining: number; // 合同额外假期剩余
   carryOver: number;           // 从上年结转的法定假期
+  carryOverUsed: number;       // 结转假期中已被使用的天数
+  carryOverExpired: number;    // 结转假期中3月31日后过期未用的天数
 }
 
 // 应用状态

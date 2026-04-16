@@ -10,7 +10,7 @@ export const TOTAL_VACATION_DAYS = STATUTORY_VACATION_DAYS + CONTRACTUAL_VACATIO
 
 // 生成唯一ID
 export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
 
 // 格式化日期为 YYYY-MM-DD
@@ -156,33 +156,48 @@ export function calculateYearlyStats(
 ): YearlyVacationStats {
   // 筛选该年度的假期记录（确保类型一致）
   const yearRecords = records.filter(r => Number(r.year) === Number(year));
-  
-  // 分别计算法定和合同假期使用量
-  let statutoryUsed = 0;
+
+  // 结转假期截止日期（当年3月31日）
+  const carryOverDeadline = `${year}-03-31`;
+
+  // 区分3月31日前后的法定假期使用量（结转天数优先抵扣截止日前的假期）
+  let statutoryUsedBeforeDeadline = 0;
+  let statutoryUsedAfterDeadline = 0;
   let contractualUsed = 0;
-  
+
   yearRecords.forEach(record => {
     if (record.type === 'statutory') {
-      statutoryUsed += record.workDays;
+      if (record.startDate <= carryOverDeadline) {
+        statutoryUsedBeforeDeadline += record.workDays;
+      } else {
+        statutoryUsedAfterDeadline += record.workDays;
+      }
     } else {
       contractualUsed += record.workDays;
     }
   });
-  
+
+  // 结转天数优先用于3月31日前的假期，未用完部分3月31日过期
+  const carryOverUsed = Math.min(carryOverFromPreviousYear, statutoryUsedBeforeDeadline);
+  const carryOverExpired = Math.max(0, carryOverFromPreviousYear - carryOverUsed);
+  const statutoryUsed = statutoryUsedBeforeDeadline + statutoryUsedAfterDeadline;
+
   // 计算剩余
   const entitlement = getYearlyEntitlement(year, employmentStartDate);
   const statutoryTotal = entitlement.statutoryTotal + carryOverFromPreviousYear;
   const contractualTotal = entitlement.contractualTotal;
-  
+
   return {
     year,
     statutoryTotal,
     contractualTotal,
     statutoryUsed,
     contractualUsed,
-    statutoryRemaining: Math.max(0, statutoryTotal - statutoryUsed),
+    statutoryRemaining: Math.max(0, statutoryTotal - statutoryUsed - carryOverExpired),
     contractualRemaining: Math.max(0, contractualTotal - contractualUsed),
     carryOver: carryOverFromPreviousYear,
+    carryOverUsed,
+    carryOverExpired,
   };
 }
 

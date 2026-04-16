@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { VacationRecord, VacationType } from './types';
+import { VacationRecord } from './types';
 import {
   generateId,
   countWorkDays,
   countWorkDaysByYear,
   calculateYearlyStats,
   calculateCarryOver,
-  isWithinCarryOverPeriod,
   saveToStorage,
   loadFromStorage,
   formatDisplayDate,
@@ -45,7 +44,6 @@ function App() {
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
   const [formDescription, setFormDescription] = useState('');
-  const [formType, setFormType] = useState<VacationType>('statutory');
 
   // 保存数据到 localStorage
   useEffect(() => {
@@ -57,13 +55,12 @@ function App() {
     localStorage.setItem('urlaub_selected_year', String(selectedYear));
   }, [selectedYear]);
 
-  // 计算统计数据（包含上一年法定结转）
+  // 计算统计数据（包含上一年法定结转，始终显示）
   const todayDate = new Date();
   const isCurrentYear = selectedYear === todayDate.getFullYear();
-  const carryOverFromPreviousYear =
-    isCurrentYear && isWithinCarryOverPeriod(selectedYear - 1, todayDate)
-      ? calculateCarryOver(records, selectedYear - 1, employmentStartDate)
-      : 0;
+  const carryOverFromPreviousYear = isCurrentYear
+    ? calculateCarryOver(records, selectedYear - 1, employmentStartDate)
+    : 0;
   const stats = calculateYearlyStats(
     records,
     selectedYear,
@@ -80,6 +77,40 @@ function App() {
   // 获取公共假日
   const publicHolidays = getPublicHolidays(selectedYear);
 
+  // 按优先级自动分配假期天数：结转法定 → 合同 → 基础法定
+  function allocateDays(
+    totalDays: number,
+    periodEndDate: string,
+    periodYear: number,
+    tempRecords: VacationRecord[]
+  ): { carryover: number; contractual: number; statutory: number } {
+    const carryOverDeadlineStr = `${periodYear}-03-31`;
+    const currentStats = calculateYearlyStats(
+      tempRecords, periodYear, carryOverFromPreviousYear, employmentStartDate
+    );
+
+    let remaining = totalDays;
+    let carryoverDays = 0;
+    let contractualDays = 0;
+    let statutoryDays = 0;
+
+    // 结束日在3月31日前且有结转天数：优先消耗结转
+    if (periodEndDate <= carryOverDeadlineStr && carryOverFromPreviousYear > 0) {
+      const carryOverAvailable = Math.max(0, carryOverFromPreviousYear - currentStats.carryOverUsed);
+      carryoverDays = Math.min(carryOverAvailable, remaining);
+      remaining -= carryoverDays;
+    }
+
+    // 其次消耗合同假期
+    contractualDays = Math.min(currentStats.contractualRemaining, remaining);
+    remaining -= contractualDays;
+
+    // 最后消耗基础法定假期
+    statutoryDays = remaining;
+
+    return { carryover: carryoverDays, contractual: contractualDays, statutory: statutoryDays };
+  }
+
   // 计算预览工作日（按年份拆分）
   const previewByYear = (formStartDate && formEndDate && formStartDate <= formEndDate)
     ? countWorkDaysByYear(formStartDate, formEndDate)
@@ -87,14 +118,8 @@ function App() {
 
   const previewWorkDays = previewByYear.reduce((sum, p) => sum + p.days, 0);
   const previewAllocations = previewByYear.map((p) => {
-    const currentStats = calculateYearlyStats(records, p.year, 0, employmentStartDate);
-    const contractualRemaining = currentStats.contractualRemaining;
-    const overflow = formType === 'contractual' ? Math.max(0, p.days - contractualRemaining) : 0;
-    return {
-      ...p,
-      contractualRemaining,
-      overflowToStatutory: overflow,
-    };
+    const alloc = allocateDays(p.days, p.endDate, p.year, records);
+    return { ...p, ...alloc };
   });
 
   // 添加假期记录
@@ -115,7 +140,7 @@ function App() {
     const createdAt = new Date().toISOString();
     const description = formDescription || '假期';
 
-    // 为每个年份创建记录，合同不足时自动扣除法定假期
+    // 按优先级自动分配：结转法定 → 合同 → 基础法定
     const newRecords: VacationRecord[] = [];
     const tempRecords: VacationRecord[] = [...records];
 
@@ -123,46 +148,46 @@ function App() {
       const periodLabel = splitByYear.length > 1 ? `${period.year}年部分` : '';
       const baseDescription = periodLabel ? `${description} (${periodLabel})` : description;
 
-      if (formType === 'contractual') {
-        const currentStats = calculateYearlyStats(tempRecords, period.year, 0, employmentStartDate);
-        const contractualRemaining = currentStats.contractualRemaining;
-        const contractualDays = Math.min(contractualRemaining, period.days);
-        const statutoryDays = period.days - contractualDays;
+      const alloc = allocateDays(period.days, period.endDate, period.year, tempRecords);
 
-        if (contractualDays > 0) {
-          newRecords.push({
-            id: generateId(),
-            startDate: period.startDate,
-            endDate: period.endDate,
-            workDays: contractualDays,
-            description: statutoryDays > 0
-              ? `${baseDescription}（合同优先）`
-              : baseDescription,
-            type: 'contractual',
-            year: period.year,
-            createdAt,
-          });
-        }
-
-        if (statutoryDays > 0) {
-          newRecords.push({
-            id: generateId(),
-            startDate: period.startDate,
-            endDate: period.endDate,
-            workDays: statutoryDays,
-            description: `${baseDescription}（超出合同自动转法定）`,
-            type: 'statutory',
-            year: period.year,
-            createdAt,
-          });
-        }
-      } else {
+      // 结转法定天数
+      if (alloc.carryover > 0) {
         newRecords.push({
           id: generateId(),
           startDate: period.startDate,
           endDate: period.endDate,
-          workDays: period.days,
-          description: baseDescription,
+          workDays: alloc.carryover,
+          description: `${baseDescription}（结转优先）`,
+          type: 'statutory',
+          year: period.year,
+          createdAt,
+        });
+      }
+
+      // 合同天数
+      if (alloc.contractual > 0) {
+        newRecords.push({
+          id: generateId(),
+          startDate: period.startDate,
+          endDate: period.endDate,
+          workDays: alloc.contractual,
+          description: `${baseDescription}（合同假期）`,
+          type: 'contractual',
+          year: period.year,
+          createdAt,
+        });
+      }
+
+      // 基础法定天数
+      if (alloc.statutory > 0) {
+        newRecords.push({
+          id: generateId(),
+          startDate: period.startDate,
+          endDate: period.endDate,
+          workDays: alloc.statutory,
+          description: alloc.carryover === 0 && alloc.contractual === 0
+            ? baseDescription
+            : `${baseDescription}（法定假期）`,
           type: 'statutory',
           year: period.year,
           createdAt,
@@ -189,7 +214,6 @@ function App() {
     setFormStartDate('');
     setFormEndDate('');
     setFormDescription('');
-    setFormType('statutory');
   };
 
   // 计算进度百分比
@@ -288,15 +312,15 @@ function App() {
             <div className="stat-info">
               <span className="stat-label">法定假期剩余</span>
               <span className="stat-value">{stats.statutoryRemaining} 天</span>
+              <span className="stat-sublabel">
+                总额 {stats.statutoryTotal} 天
+                {carryOverFromPreviousYear > 0 && `（含结转 ${carryOverFromPreviousYear} 天）`}
+                {stats.carryOverExpired > 0 && `，已过期 ${stats.carryOverExpired} 天`}
+              </span>
             </div>
             <div className="stat-note">
               <Info size={14} />
-              <span>可结转至次年3月31日</span>
-              {carryOverFromPreviousYear > 0 && (
-                <span className="carryover-note">
-                  （已结转 {carryOverFromPreviousYear} 天）
-                </span>
-              )}
+              <span>结转部分须在次年3月31日前使用</span>
             </div>
           </div>
 
@@ -381,36 +405,25 @@ function App() {
                           <span className="split-dates">
                             ({formatDisplayDate(p.startDate)} - {formatDisplayDate(p.endDate)})
                           </span>
-                          {formType === 'contractual' && p.overflowToStatutory > 0 && (
-                            <span className="split-warning">
-                              合同剩余{p.contractualRemaining}天，超出{p.overflowToStatutory}天将自动转法定
-                            </span>
-                          )}
+                          <span className="split-alloc">
+                            {p.carryover > 0 && <span className="alloc-tag carryover">结转 {p.carryover}天</span>}
+                            {p.contractual > 0 && <span className="alloc-tag contractual">合同 {p.contractual}天</span>}
+                            {p.statutory > 0 && <span className="alloc-tag statutory">法定 {p.statutory}天</span>}
+                          </span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
               )}
-              <div className="form-group">
-                <label>假期类型</label>
-                <div className="type-selector">
-                  <button
-                    className={`type-btn ${formType === 'statutory' ? 'active statutory' : ''}`}
-                    onClick={() => setFormType('statutory')}
-                  >
-                    法定假期
-                    <small>Gesetzlich ({stats.statutoryRemaining}天剩余)</small>
-                  </button>
-                  <button
-                    className={`type-btn ${formType === 'contractual' ? 'active contractual' : ''}`}
-                    onClick={() => setFormType('contractual')}
-                  >
-                    合同假期
-                    <small>Vertraglich ({stats.contractualRemaining}天剩余)</small>
-                  </button>
+              {carryOverFromPreviousYear > 0 && formEndDate && formEndDate <= `${selectedYear}-03-31` && (
+                <div className="carryover-hint">
+                  <Info size={14} />
+                  <span>
+                    3月31日前有结转法定假期，将优先使用结转天数
+                  </span>
                 </div>
-              </div>
+              )}
               <div className="form-group">
                 <label>备注（可选）</label>
                 <input
