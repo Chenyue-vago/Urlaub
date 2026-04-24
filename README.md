@@ -8,7 +8,7 @@ A simple personal vacation tracker for employees working in Germany. Built with 
 - **Carry-over awareness**: unused statutory days carry into the next year and expire on March 31. The app prioritizes carry-over for vacations ending on or before that deadline.
 - **Region-aware public holidays**: pick your German federal state (`Bundesland`) and the workday calculation automatically excludes the right public holidays.
 - **Cross-year vacations**: a vacation that spans New Year is automatically split and counted against the right year's quota.
-- **Per-record day list**: each record shows the exact `DD.MM.` workdays it consumed. When a single vacation is split across multiple buckets (carry-over → contractual → statutory, in that priority order), each split lists only the days assigned to it instead of repeating the full range.
+- **Per-record day list**: each record shows the exact `DD.MM.` workdays it consumed. When a single vacation is split across multiple buckets (carry-over → contractual → statutory, in that priority order), each split lists only the days assigned to it.
 
 ## Quick start
 
@@ -37,11 +37,11 @@ export default defineConfig({
 
 ## First-time use
 
-On first open you'll be asked for your **employment start date** (in English, regardless of language preference). This value is used to pro-rate your entitlement for the year you joined. Later years always use the full 28 days.
+On first open you'll be asked for your **employment start date**. This value is used to pro-rate your entitlement for the year you joined. Later years always use the full 28 days.
 
 After that, optionally:
 
-1. Top right: pick your **language** (`EN` / `中文`).
+1. Top right: pick your **language**. Only English and Chinese (`中文`) are supported at the moment.
 2. Top right: pick your **region** (e.g. `Baden-Württemberg`, `Bayern`, …) so public holidays match.
 3. Click the **gear icon** any time to change your employment start date.
 
