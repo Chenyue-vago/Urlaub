@@ -416,35 +416,6 @@ body {
   margin-top: 0.1rem;
 }
 
-.split-alloc {
-  display: flex;
-  gap: 0.3rem;
-  flex-wrap: wrap;
-  margin-top: 0.2rem;
-}
-
-.alloc-tag {
-  font-size: 0.7rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 0.3rem;
-  font-weight: 600;
-}
-
-.alloc-tag.carryover {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.alloc-tag.contractual {
-  background: #fff3e0;
-  color: #e65100;
-}
-
-.alloc-tag.statutory {
-  background: #e8f5e9;
-  color: var(--color-primary);
-}
-
 .carryover-hint {
   display: flex;
   align-items: flex-start;
@@ -653,12 +624,6 @@ body {
   font-family: var(--font-mono);
 }
 
-.preview-note {
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-}
-
 .date-summary {
   background: var(--color-bg-subtle);
   padding: 0.5rem 0.75rem;
@@ -667,50 +632,6 @@ body {
   color: var(--color-text-secondary);
   margin-bottom: 1rem;
 }
-
-.date-summary-raw {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  margin-top: 0.25rem;
-  font-family: var(--font-mono);
-}
-
-.preview-split {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px dashed var(--color-border);
-}
-
-.split-title {
-  font-size: 0.85rem;
-  color: var(--color-accent);
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.split-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0;
-  font-size: 0.85rem;
-}
-
-.split-item strong {
-  color: var(--color-primary);
-  font-family: var(--font-mono);
-}
-
-.split-dates {
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-}
-
-.split-warning {
-  color: var(--color-contractual);
-  font-size: 0.75rem;
-}
-
 
 .type-selector {
   display: grid;

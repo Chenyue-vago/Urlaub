@@ -241,10 +241,6 @@ function App() {
     : [];
 
   const previewWorkDays = previewByYear.reduce((sum, p) => sum + p.days, 0);
-  const previewAllocations = previewByYear.map((p) => {
-    const alloc = allocateDays(p.days, p.endDate, p.year, records);
-    return { ...p, ...alloc };
-  });
 
   const handleAddRecord = () => {
     if (!formStartDate || !formEndDate || formStartDate > formEndDate) {
@@ -541,12 +537,6 @@ function App() {
                     start: formStartDate ? formatDisplayDate(formStartDate) : dash,
                     end: formEndDate ? formatDisplayDate(formEndDate) : dash,
                   })}
-                  <div className="date-summary-raw">
-                    {t('modal.dateRaw', {
-                      start: formStartDate || dash,
-                      end: formEndDate || dash,
-                    })}
-                  </div>
                 </div>
               )}
               {previewWorkDays > 0 && (
@@ -555,40 +545,6 @@ function App() {
                     <span>{t('modal.consumeDays')}</span>
                     <strong>{t('modal.daysValue', { n: previewWorkDays })}</strong>
                   </div>
-                  <div className="preview-note">{t('modal.autoExclude')}</div>
-                  {previewByYear.length > 0 && (
-                    <div className="preview-split">
-                      <div className="split-title">
-                        {previewByYear.length > 1 ? t('modal.crossYearTitle') : t('modal.byYearTitle')}
-                      </div>
-                      {previewAllocations.map((p) => (
-                        <div key={p.year} className="split-item">
-                          <span>{t('modal.yearLabel', { year: p.year })}</span>
-                          <strong>{t('modal.daysValue', { n: p.days })}</strong>
-                          <span className="split-dates">
-                            ({formatDisplayDate(p.startDate)} - {formatDisplayDate(p.endDate)})
-                          </span>
-                          <span className="split-alloc">
-                            {p.carryover > 0 && (
-                              <span className="alloc-tag carryover">
-                                {t('modal.tagCarryover', { n: p.carryover })}
-                              </span>
-                            )}
-                            {p.contractual > 0 && (
-                              <span className="alloc-tag contractual">
-                                {t('modal.tagContractual', { n: p.contractual })}
-                              </span>
-                            )}
-                            {p.statutory > 0 && (
-                              <span className="alloc-tag statutory">
-                                {t('modal.tagStatutory', { n: p.statutory })}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
               {carryOverFromPreviousYear > 0 && formEndDate && formEndDate <= `${selectedYear}-03-31` && (
