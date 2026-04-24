@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { VacationRecord } from './types';
 import {
   generateId,
@@ -12,6 +12,8 @@ import {
   formatDateString,
   formatShortDate,
   getWorkDayDates,
+  exportAllData,
+  importAllData,
 } from './utils';
 import { getPublicHolidays } from './holidays';
 import {
@@ -90,6 +92,57 @@ function App() {
   // 设置模态框（手动打开）
   const [showSettings, setShowSettings] = useState(false);
   const [settingsDraftDate, setSettingsDraftDate] = useState('');
+
+  // 用于触发隐藏的 file input 走系统文件选择
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportBackup = () => {
+    const payload = exportAllData();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `urlaub-backup-${formatDateString(new Date())}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    // 一定要清空，否则下次选同名文件 onChange 不会再触发
+    const resetInput = () => {
+      input.value = '';
+    };
+    if (!window.confirm(t('settings.importConfirm'))) {
+      resetInput();
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => {
+      window.alert(t('settings.importError'));
+      resetInput();
+    };
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        const { count } = importAllData(parsed);
+        window.alert(t('settings.importSuccess', { n: count }));
+        // 各种 state 都是 useState 初值时一次性从 localStorage 读的，
+        // 简单起见整页刷新让所有读取重新走一遍。
+        window.location.reload();
+      } catch {
+        window.alert(t('settings.importError'));
+        resetInput();
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // 首次欢迎模态框（必须填写后才能进入）
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
@@ -733,6 +786,35 @@ function App() {
               />
               <p className="form-hint">{t('settings.employmentStartHint')}</p>
             </div>
+
+            <div className="settings-section">
+              <h3 className="settings-section-title">{t('settings.backupTitle')}</h3>
+              <p className="form-hint">{t('settings.backupHint')}</p>
+              <div className="settings-backup-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleExportBackup}
+                >
+                  {t('settings.export')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => importInputRef.current?.click()}
+                >
+                  {t('settings.import')}
+                </button>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  hidden
+                  onChange={handleImportFileChosen}
+                />
+              </div>
+            </div>
+
             <div className="modal-actions">
               <button
                 className="btn btn-ghost"

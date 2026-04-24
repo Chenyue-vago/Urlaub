@@ -236,6 +236,62 @@ export function calculateCarryOver(
 // 本地存储键
 const STORAGE_KEY = 'urlaub_manager_data';
 
+// 备份/恢复涉及的所有 localStorage key —— 与 App.tsx / i18n.ts / 各 useState 初值保持一致。
+// 新增 key 时记得同步加进来，否则备份文件不会包含它。
+export const ALL_STORAGE_KEYS = [
+  'urlaub_manager_data',
+  'urlaub_employment_start',
+  'urlaub_language',
+  'urlaub_region',
+  'urlaub_selected_year',
+] as const;
+
+export interface BackupFile {
+  schemaVersion: number;
+  exportedAt: string;
+  data: Record<string, string>;
+}
+
+export function exportAllData(): BackupFile {
+  const data: Record<string, string> = {};
+  for (const key of ALL_STORAGE_KEYS) {
+    const value = localStorage.getItem(key);
+    if (value !== null) data[key] = value;
+  }
+  return {
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    data,
+  };
+}
+
+// 校验并把备份内容写回 localStorage。返回写入了多少条 key（供 UI 提示）。
+// 任何非预期结构都抛错，由调用方决定怎么提示用户。
+export function importAllData(parsed: unknown): { count: number } {
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('invalid backup file');
+  }
+  const root = parsed as { data?: unknown };
+  if (!root.data || typeof root.data !== 'object') {
+    throw new Error('missing data field');
+  }
+  const data = root.data as Record<string, unknown>;
+  let count = 0;
+  for (const key of ALL_STORAGE_KEYS) {
+    if (key in data) {
+      const value = data[key];
+      if (typeof value === 'string') {
+        localStorage.setItem(key, value);
+        count++;
+      }
+    }
+  }
+  if (count === 0) {
+    throw new Error('no recognised keys');
+  }
+  return { count };
+}
+
 // 保存数据到本地存储
 export function saveToStorage(records: VacationRecord[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records));

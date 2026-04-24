@@ -1,6 +1,6 @@
 # Urlaubsverwaltung
 
-A simple personal vacation tracker for employees working in Germany. Built with Vite + React + TypeScript. All data stays in your browser via `localStorage` — no backend, no account, nothing leaves your machine.
+A simple personal vacation tracker for employees. Built with Vite + React + TypeScript. 
 
 ## Features
 
@@ -9,6 +9,7 @@ A simple personal vacation tracker for employees working in Germany. Built with 
 - **Region-aware public holidays**: pick your German federal state (`Bundesland`) and the workday calculation automatically excludes the right public holidays.
 - **Cross-year vacations**: a vacation that spans New Year is automatically split and counted against the right year's quota.
 - **Per-record day list**: each record shows the exact `DD.MM.` workdays it consumed. When a single vacation is split across multiple buckets (carry-over → contractual → statutory, in that priority order), each split lists only the days assigned to it.
+- **Backup & restore**: export your data to a JSON file and import it later — see [Backup & restore](#backup--restore) below.
 
 ## Quick start
 
@@ -73,7 +74,21 @@ In your browser only — under `localStorage` keys starting with `urlaub_`:
 - **Don't use incognito / private windows for real data.** Their `localStorage` is wiped the moment you close the last incognito window.
 - **Avoid "Clear site data" / "Clear browsing data → Cookies and site data"** for this site, otherwise everything is gone.
 
-There is no backup, no export, no cloud sync — if you wipe `localStorage`, the data is gone for good.
+If you need to switch browsers, machines, ports, or want a safety net before clearing site data, use the built-in **Backup & restore** below.
+
+### Backup & restore
+
+Open the **gear icon** at the top right and use the **💾 Backup & restore** section:
+
+- **📤 Export backup** — downloads a `urlaub-backup-YYYY-MM-DD.json` file containing all your data (records, employment start date, language, region, last viewed year). Save this somewhere safe (cloud drive, email to yourself, USB, …).
+- **📥 Import backup** — pick a previously-exported JSON file. After confirming, the file's contents **overwrite** everything currently in `localStorage` and the page reloads.
+
+Practical tips:
+
+- Export once after adding several records, and again every few months as a manual backup.
+- When moving to a new browser / machine / port: export from the old one first, then import on the new one.
+- The file is plain JSON — you can open it in any text editor to inspect or hand-edit before importing.
+- Import is **destructive**: it replaces all current data with what's in the file. There is no merge across multiple devices, so don't edit the same data on two devices in parallel and expect both sets of edits to survive an import.
 
 ## Build for production
 

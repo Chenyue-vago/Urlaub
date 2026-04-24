@@ -28,6 +28,14 @@ const zh: Dict = {
   'settings.save': '保存',
   'settings.cancel': '取消',
 
+  'settings.backupTitle': '💾 备份与恢复',
+  'settings.backupHint': '建议定期导出备份。换浏览器、换设备、换端口或清理浏览器数据时，先在旧地方导出，再到新地方导入。',
+  'settings.export': '📤 导出备份',
+  'settings.import': '📥 导入备份',
+  'settings.importConfirm': '导入会用备份文件中的内容覆盖当前的所有数据（包括请假记录、入职日期、语言和地区设置）。继续吗？',
+  'settings.importSuccess': '导入成功，恢复了 {n} 项数据。页面将刷新以应用更改。',
+  'settings.importError': '无法读取备份文件，请确认它是本应用导出的 JSON 文件。',
+
   'welcome.title': '👋 欢迎使用',
   'welcome.body': '请先填写你在公司的入职日期。系统会按入职月份按比例计算你入职当年的假期额度（之后年份按完整 28 天计算）。这个值之后可以在右上角 ⚙️ 设置里修改。',
   'welcome.continue': '开始使用',
@@ -118,6 +126,14 @@ const en: Dict = {
   'settings.employmentStartHint': 'Used to pro-rate your vacation entitlement for the year you joined. You can change this anytime.',
   'settings.save': 'Save',
   'settings.cancel': 'Cancel',
+
+  'settings.backupTitle': '💾 Backup & restore',
+  'settings.backupHint': 'Export a backup once in a while. Before changing browser, machine, port or clearing site data, export from the old place and import on the new one.',
+  'settings.export': '📤 Export backup',
+  'settings.import': '📥 Import backup',
+  'settings.importConfirm': 'Importing will overwrite all your current data (vacation records, employment start date, language and region) with what is in the backup file. Continue?',
+  'settings.importSuccess': 'Import successful, {n} item(s) restored. The page will reload to apply the changes.',
+  'settings.importError': 'Could not read the backup file. Please make sure it is a JSON file exported from this app.',
 
   'welcome.title': '👋 Welcome',
   'welcome.body': 'First, tell us when you joined the company. Your entitlement for the join year will be pro-rated by the number of remaining months (later years use the full 28 days). You can change this later via the ⚙️ Settings button in the top right.',
