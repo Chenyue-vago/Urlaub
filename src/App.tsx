@@ -472,7 +472,6 @@ function App() {
               </span>
             </div>
             <div className="stat-note">
-              <Info size={14} />
               <span>{t('stats.carryoverHint')}</span>
             </div>
           </div>
@@ -486,7 +485,6 @@ function App() {
               <span className="stat-value">{t('stats.daysShort', { n: stats.contractualRemaining })}</span>
             </div>
             <div className="stat-note warning">
-              <Info size={14} />
               <span>{t('stats.contractualExpiryHint')}</span>
             </div>
           </div>
