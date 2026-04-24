@@ -1,76 +1,109 @@
+import HolidaysParser from 'date-holidays-parser';
+import deData from './data/de-holidays.json';
 import { PublicHoliday } from './types';
+import { RegionCode, DEFAULT_REGION } from './regions';
 
-// 巴登-符腾堡州公共假日
-// 这些是固定日期的假日，复活节等浮动假日需要每年计算
+/**
+ * 公共假日数据来源：date-holidays（commenthol/date-holidays，按 ISO 3166-2:DE 区码区分各联邦州）
+ *
+ * 实现细节：
+ *  - 仅打包德国部分（src/data/de-holidays.json，由 scripts/extract-de-holidays.mjs 在
+ *    `predev` / `prebuild` 时从 date-holidays/data/holidays.json 自动抽取）
+ *  - 使用底层 `date-holidays-parser` 直接解析，避免引入全球 100+ 国家数据
+ *  - 德语原名 + 英文名直接来自该库；中文名由本文件 `ZH_NAMES` 维护（按德语原名匹配）
+ *  - 仅返回 `type === 'public'` 的法定公共假日
+ *
+ * 该库内部已处理：
+ *   - 复活节算法、Buß- und Bettag（11/23 之前最后一个周三）等浮动假日
+ *   - 各州差异（Mariä Himmelfahrt 仅 BY/SL，Reformationstag 北部州 2018 起，
+ *     Internationaler Frauentag MV 2023 起，等等）
+ */
 
-// 计算复活节日期 (Anonymous Gregorian algorithm)
-function getEasterDate(year: number): Date {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4);
-  const k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const month = Math.floor((h + l - 7 * m + 114) / 31);
-  const day = ((h + l - 7 * m + 114) % 31) + 1;
-  return new Date(year, month - 1, day);
+// 德语原名 → 中文名映射，缺失时回退到英文名
+const ZH_NAMES: Record<string, string> = {
+  'Neujahr': '元旦',
+  'Heilige Drei Könige': '三王节',
+  'Internationaler Frauentag': '国际妇女节',
+  'Karfreitag': '耶稣受难日',
+  'Ostersonntag': '复活节星期日',
+  'Ostermontag': '复活节星期一',
+  'Maifeiertag': '劳动节',
+  'Tag der Arbeit': '劳动节',
+  'Christi Himmelfahrt': '耶稣升天节',
+  'Pfingstsonntag': '圣灵降临节星期日',
+  'Pfingstmontag': '圣灵降临节星期一',
+  'Fronleichnam': '基督圣体节',
+  'Mariä Himmelfahrt': '圣母升天节',
+  'Augsburger Friedensfest': '奥格斯堡和平节',
+  'Weltkindertag': '世界儿童日',
+  'Tag der Deutschen Einheit': '德国统一日',
+  'Reformationstag': '宗教改革日',
+  'Allerheiligen': '万圣节',
+  'Buß- und Bettag': '忏悔祈祷日',
+  '1. Weihnachtstag': '圣诞节第一天',
+  '2. Weihnachtstag': '圣诞节第二天',
+};
+
+// 缓存每个州的 parser 实例
+const cache = new Map<RegionCode, HolidaysParser>();
+
+function getInstance(region: RegionCode): HolidaysParser {
+  let hd = cache.get(region);
+  if (!hd) {
+    hd = new HolidaysParser(deData, 'DE', region);
+    cache.set(region, hd);
+  }
+  return hd;
 }
 
-// 格式化日期为 YYYY-MM-DD
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+interface RawHoliday {
+  date: string;            // "YYYY-MM-DD HH:mm:ss"
+  name: string;
+  type: string;
 }
 
-// 添加天数到日期
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
+function toIsoDate(rawDate: string): string {
+  // date-holidays 返回 "YYYY-MM-DD HH:mm:ss"
+  return rawDate.slice(0, 10);
 }
 
-// 获取指定年份巴登-符腾堡州的所有公共假日
-export function getPublicHolidays(year: number): PublicHoliday[] {
-  const easter = getEasterDate(year);
-  
-  const holidays: PublicHoliday[] = [
-    // 固定假日
-    { date: `${year}-01-01`, name: 'Neujahr', nameZh: '元旦' },
-    { date: `${year}-01-06`, name: 'Heilige Drei Könige', nameZh: '三王节' },
-    { date: `${year}-05-01`, name: 'Tag der Arbeit', nameZh: '劳动节' },
-    { date: `${year}-10-03`, name: 'Tag der Deutschen Einheit', nameZh: '德国统一日' },
-    { date: `${year}-11-01`, name: 'Allerheiligen', nameZh: '万圣节' },
-    { date: `${year}-12-25`, name: '1. Weihnachtstag', nameZh: '圣诞节第一天' },
-    { date: `${year}-12-26`, name: '2. Weihnachtstag', nameZh: '圣诞节第二天' },
-    
-    // 浮动假日（基于复活节）
-    { date: formatDate(addDays(easter, -2)), name: 'Karfreitag', nameZh: '耶稣受难日' },
-    { date: formatDate(easter), name: 'Ostersonntag', nameZh: '复活节星期日' },
-    { date: formatDate(addDays(easter, 1)), name: 'Ostermontag', nameZh: '复活节星期一' },
-    { date: formatDate(addDays(easter, 39)), name: 'Christi Himmelfahrt', nameZh: '耶稳升天节' },
-    { date: formatDate(addDays(easter, 49)), name: 'Pfingstsonntag', nameZh: '圣灵降临节星期日' },
-    { date: formatDate(addDays(easter, 50)), name: 'Pfingstmontag', nameZh: '圣灵降临节星期一' },
-    { date: formatDate(addDays(easter, 60)), name: 'Fronleichnam', nameZh: '基督圣体节' },
-  ];
+// 获取指定州指定年份的所有公共假日
+export function getPublicHolidays(year: number, region: RegionCode = DEFAULT_REGION): PublicHoliday[] {
+  const hd = getInstance(region);
 
-  // 按日期排序
+  hd.setLanguages(['de']);
+  const deList = (hd.getHolidays(year) as RawHoliday[]).filter((h) => h.type === 'public');
+
+  hd.setLanguages(['en']);
+  const enByDate = new Map<string, string>();
+  (hd.getHolidays(year) as RawHoliday[])
+    .filter((h) => h.type === 'public')
+    .forEach((h) => enByDate.set(toIsoDate(h.date), h.name));
+
+  hd.setLanguages(['de']);
+
+  const holidays: PublicHoliday[] = deList.map((h) => {
+    const dateStr = toIsoDate(h.date);
+    const nameDe = h.name;
+    const nameEn = enByDate.get(dateStr) ?? nameDe;
+    const nameZh = ZH_NAMES[nameDe] ?? nameEn;
+    return {
+      date: dateStr,
+      name: nameDe,
+      nameEn,
+      nameZh,
+    };
+  });
+
   return holidays.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 // 检查某天是否是公共假日
 export function isPublicHoliday(dateStr: string, holidays: PublicHoliday[]): boolean {
-  return holidays.some(h => h.date === dateStr);
+  return holidays.some((h) => h.date === dateStr);
 }
 
 // 获取某个日期的公共假日信息
 export function getHolidayInfo(dateStr: string, holidays: PublicHoliday[]): PublicHoliday | undefined {
-  return holidays.find(h => h.date === dateStr);
+  return holidays.find((h) => h.date === dateStr);
 }

@@ -96,6 +96,89 @@ body {
   z-index: 1;
 }
 
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.header-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-full);
+  color: white;
+  font-size: 0.85rem;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.header-select:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.header-select select {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: white;
+  font: inherit;
+  cursor: pointer;
+  padding-right: 0.25rem;
+  outline: none;
+  max-width: 12rem;
+}
+
+.header-select select option {
+  color: var(--color-text);
+  background: var(--color-bg-card);
+}
+
+.header-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-full);
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.header-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -507,6 +590,30 @@ body {
   box-shadow: 0 0 0 3px var(--color-statutory-light);
 }
 
+.form-hint {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.form-error {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: #c0392b;
+}
+
+.welcome-modal {
+  max-width: 520px;
+}
+
+.welcome-body {
+  margin-bottom: 1.25rem;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
 .preview-days {
   background: var(--color-bg-subtle);
   padding: 0.75rem 1rem;
@@ -709,14 +816,30 @@ body {
   border-radius: var(--radius-md);
   padding: 1rem 1.25rem;
   display: flex;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
   border: 1px solid var(--color-border);
   transition: all 0.2s ease;
 }
 
 .record-card:hover {
   box-shadow: var(--shadow-sm);
+}
+
+.record-row-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.record-workdays {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--color-border);
+  font-family: var(--font-mono);
+  word-break: break-word;
+  line-height: 1.5;
 }
 
 .record-dates {
@@ -756,6 +879,12 @@ body {
 .record-type.contractual {
   background: var(--color-contractual-light);
   color: var(--color-contractual);
+}
+
+.record-type.carryover {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #2e7d3233;
 }
 
 .record-year {
@@ -864,24 +993,41 @@ body {
   .main {
     padding: 1rem;
   }
-  
-  .record-card {
+
+  .header {
+    padding: 1.25rem 1rem;
+  }
+
+  .header-top {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
+  .header-controls {
+    width: 100%;
+  }
+
+  .header-select select {
+    max-width: 9rem;
+  }
+
+  .record-row-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .record-info {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.25rem;
   }
-  
+
   .record-delete {
     position: absolute;
     right: 0.5rem;
     top: 0.5rem;
   }
-  
+
   .record-card {
     position: relative;
   }

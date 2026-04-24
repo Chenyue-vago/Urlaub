@@ -1,5 +1,6 @@
 import { VacationRecord, YearlyVacationStats } from './types';
 import { getPublicHolidays, isPublicHoliday } from './holidays';
+import { RegionCode, DEFAULT_REGION } from './regions';
 
 // 德国法定最低假期天数
 export const STATUTORY_VACATION_DAYS = 20;
@@ -33,74 +34,87 @@ export function isWeekend(date: Date): boolean {
   return day === 0 || day === 6;
 }
 
-// 计算两个日期之间的工作日数量（排除周末和公共假日）
-export function countWorkDays(startDateStr: string, endDateStr: string): number {
+// 列出某段日期范围内所有"算作休假"的工作日（排除周末与该州的公共假日）
+export function getWorkDayDates(
+  startDateStr: string,
+  endDateStr: string,
+  region: RegionCode = DEFAULT_REGION
+): string[] {
   const startDate = parseDate(startDateStr);
   const endDate = parseDate(endDateStr);
-  
-  // 获取涉及年份的所有公共假日
+
   const startYear = startDate.getFullYear();
   const endYear = endDate.getFullYear();
   const allHolidays = [];
   for (let year = startYear; year <= endYear; year++) {
-    allHolidays.push(...getPublicHolidays(year));
+    allHolidays.push(...getPublicHolidays(year, region));
   }
 
-  let workDays = 0;
+  const dates: string[] = [];
   const current = new Date(startDate);
-  
+
   while (current <= endDate) {
     if (!isWeekend(current)) {
       const dateStr = formatDateString(current);
       if (!isPublicHoliday(dateStr, allHolidays)) {
-        workDays++;
+        dates.push(dateStr);
       }
     }
     current.setDate(current.getDate() + 1);
   }
-  
-  return workDays;
+
+  return dates;
+}
+
+// 计算两个日期之间的工作日数量（排除周末和公共假日）
+export function countWorkDays(
+  startDateStr: string,
+  endDateStr: string,
+  region: RegionCode = DEFAULT_REGION
+): number {
+  return getWorkDayDates(startDateStr, endDateStr, region).length;
 }
 
 // 按年份拆分计算工作日
-export function countWorkDaysByYear(startDateStr: string, endDateStr: string): { year: number; days: number; startDate: string; endDate: string }[] {
+export function countWorkDaysByYear(
+  startDateStr: string,
+  endDateStr: string,
+  region: RegionCode = DEFAULT_REGION
+): { year: number; days: number; startDate: string; endDate: string }[] {
   const startDate = parseDate(startDateStr);
   const endDate = parseDate(endDateStr);
   const startYear = startDate.getFullYear();
   const endYear = endDate.getFullYear();
-  
+
   // 如果在同一年，直接返回
   if (startYear === endYear) {
     return [{
       year: startYear,
-      days: countWorkDays(startDateStr, endDateStr),
+      days: countWorkDays(startDateStr, endDateStr, region),
       startDate: startDateStr,
       endDate: endDateStr,
     }];
   }
-  
+
   // 跨年的情况，按年份拆分
   const result: { year: number; days: number; startDate: string; endDate: string }[] = [];
-  
+
   for (let year = startYear; year <= endYear; year++) {
     let periodStart: string;
     let periodEnd: string;
-    
+
     if (year === startYear) {
-      // 第一年：从开始日期到12月31日
       periodStart = startDateStr;
       periodEnd = `${year}-12-31`;
     } else if (year === endYear) {
-      // 最后一年：从1月1日到结束日期
       periodStart = `${year}-01-01`;
       periodEnd = endDateStr;
     } else {
-      // 中间年份：整年
       periodStart = `${year}-01-01`;
       periodEnd = `${year}-12-31`;
     }
-    
-    const days = countWorkDays(periodStart, periodEnd);
+
+    const days = countWorkDays(periodStart, periodEnd, region);
     if (days > 0) {
       result.push({
         year,
@@ -110,7 +124,7 @@ export function countWorkDaysByYear(startDateStr: string, endDateStr: string): {
       });
     }
   }
-  
+
   return result;
 }
 
@@ -227,23 +241,66 @@ export function saveToStorage(records: VacationRecord[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 }
 
+// 旧版本会把本地化后缀写入 description，这里在加载时做一次性迁移：
+// - 检测到「（结转优先）/(carry-over first)」时设置 isCarryOver = true
+// - 删除自动生成的后缀（结转优先/合同假期/法定假期，及其英文对应）
+// - 删除按年拆分时自动追加的「(YYYY年部分) / (Part of YYYY)」标记
+// - 默认占位词 "假期" / "Vacation" 视为空备注
+function migrateRecord(raw: Partial<VacationRecord> & { description?: string }): VacationRecord {
+  const original = raw.description ?? '';
+  const carryOverHinted =
+    original.includes('（结转优先）') || /\(carry-over first\)/i.test(original);
+
+  const cleaned = original
+    .replace(/（结转优先）/g, '')
+    .replace(/（合同假期）/g, '')
+    .replace(/（法定假期）/g, '')
+    .replace(/\s*\(carry-over first\)/gi, '')
+    .replace(/\s*\(contractual\)/gi, '')
+    .replace(/\s*\(statutory\)/gi, '')
+    .replace(/\s*\(\d+年部分\)/g, '')
+    .replace(/\s*\(Part of \d+\)/gi, '')
+    .trim();
+
+  const isPlaceholderOnly = cleaned === '假期' || cleaned === 'Vacation';
+  const description = isPlaceholderOnly ? '' : cleaned;
+
+  return {
+    id: String(raw.id ?? ''),
+    startDate: String(raw.startDate ?? ''),
+    endDate: String(raw.endDate ?? ''),
+    workDays: Number(raw.workDays ?? 0),
+    description,
+    type: (raw.type as VacationRecord['type']) ?? 'statutory',
+    isCarryOver: raw.isCarryOver === true || (carryOverHinted && raw.type !== 'contractual'),
+    year: Number(raw.year ?? new Date().getFullYear()),
+    createdAt: String(raw.createdAt ?? new Date().toISOString()),
+  };
+}
+
 // 从本地存储加载数据
 export function loadFromStorage(): VacationRecord[] {
   const data = localStorage.getItem(STORAGE_KEY);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return [];
-    }
+  if (!data) return [];
+  try {
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(migrateRecord);
+  } catch {
+    return [];
   }
-  return [];
 }
 
 // 格式化显示日期 (德国格式 DD.MM.YYYY)
 export function formatDisplayDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-');
   return `${day}.${month}.${year}`;
+}
+
+// 短日期 (DD.MM.) — 用在已经有年份上下文的列表里
+export function formatShortDate(dateStr: string): string {
+  const [, month, day] = dateStr.split('-');
+  return `${day}.${month}.`;
 }
 
 // 获取月份名称

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { VacationRecord } from './types';
 import {
   generateId,
@@ -10,6 +10,8 @@ import {
   loadFromStorage,
   formatDisplayDate,
   formatDateString,
+  formatShortDate,
+  getWorkDayDates,
 } from './utils';
 import { getPublicHolidays } from './holidays';
 import {
@@ -23,9 +25,45 @@ import {
   Info,
   ChevronLeft,
   ChevronRight,
+  Globe,
+  MapPin,
+  Settings,
 } from 'lucide-react';
+import { LOCALES, Locale, getTranslator, useTranslation } from './i18n';
+import { DEFAULT_REGION, REGIONS, RegionCode, getRegion, isRegionCode } from './regions';
+
+const REGION_STORAGE_KEY = 'urlaub_region';
+const EMPLOYMENT_START_STORAGE_KEY = 'urlaub_employment_start';
+
+// 简单校验：YYYY-MM-DD 且能 parse 出有效日期
+function isValidIsoDate(s: string | null | undefined): s is string {
+  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(s);
+  return !Number.isNaN(d.getTime());
+}
 
 function App() {
+  const { locale, setLocale, t } = useTranslation();
+
+  // 当前选中的州（影响公共假日 & 工作日计算）
+  const [region, setRegion] = useState<RegionCode>(() => {
+    try {
+      const saved = localStorage.getItem(REGION_STORAGE_KEY);
+      if (isRegionCode(saved)) return saved;
+    } catch {
+      // ignore
+    }
+    return DEFAULT_REGION;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(REGION_STORAGE_KEY, region);
+    } catch {
+      // ignore
+    }
+  }, [region]);
+
   // 使用惰性初始化直接从 localStorage 加载数据
   const [records, setRecords] = useState<VacationRecord[]>(() => {
     const saved = loadFromStorage();
@@ -38,24 +76,54 @@ function App() {
   });
   const [showAddForm, setShowAddForm] = useState(false);
   const [showHolidays, setShowHolidays] = useState(false);
-  const employmentStartDate = '2025-08-01';
+
+  // 入职日期：从 localStorage 读取；首次访问时为空，会触发欢迎模态框
+  const [employmentStartDate, setEmploymentStartDate] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(EMPLOYMENT_START_STORAGE_KEY);
+      return isValidIsoDate(saved) ? saved : '';
+    } catch {
+      return '';
+    }
+  });
+
+  // 设置模态框（手动打开）
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsDraftDate, setSettingsDraftDate] = useState('');
+
+  // 首次欢迎模态框（必须填写后才能进入）
+  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+    try {
+      return !isValidIsoDate(localStorage.getItem(EMPLOYMENT_START_STORAGE_KEY));
+    } catch {
+      return true;
+    }
+  });
+  const [welcomeDraftDate, setWelcomeDraftDate] = useState('');
+  const [welcomeError, setWelcomeError] = useState(false);
+
+  useEffect(() => {
+    if (!employmentStartDate) return;
+    try {
+      localStorage.setItem(EMPLOYMENT_START_STORAGE_KEY, employmentStartDate);
+    } catch {
+      // ignore
+    }
+  }, [employmentStartDate]);
 
   // 表单状态
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
   const [formDescription, setFormDescription] = useState('');
 
-  // 保存数据到 localStorage
   useEffect(() => {
     saveToStorage(records);
   }, [records]);
 
-  // 记住当前选择的年份，避免刷新或热更新后跳回当前年
   useEffect(() => {
     localStorage.setItem('urlaub_selected_year', String(selectedYear));
   }, [selectedYear]);
 
-  // 计算统计数据（包含上一年法定结转，始终显示）
   const todayDate = new Date();
   const isCurrentYear = selectedYear === todayDate.getFullYear();
   const carryOverFromPreviousYear = isCurrentYear
@@ -69,13 +137,19 @@ function App() {
   );
   const yearlyTotal = stats.statutoryTotal + stats.contractualTotal;
 
-  // 获取该年的假期记录
   const yearRecords = records
     .filter((r) => Number(r.year) === Number(selectedYear))
     .sort((a, b) => b.startDate.localeCompare(a.startDate));
 
-  // 获取公共假日
-  const publicHolidays = getPublicHolidays(selectedYear);
+  // 公共假日（按当前州和年份）
+  const publicHolidays = useMemo(
+    () => getPublicHolidays(selectedYear, region),
+    [selectedYear, region]
+  );
+
+  // 当前州的本地化名称
+  const currentRegion = getRegion(region);
+  const regionLabel = locale === 'zh' ? currentRegion.nameZh : currentRegion.nameEn;
 
   // 按优先级自动分配假期天数：结转法定 → 合同 → 基础法定
   function allocateDays(
@@ -94,26 +168,23 @@ function App() {
     let contractualDays = 0;
     let statutoryDays = 0;
 
-    // 结束日在3月31日前且有结转天数：优先消耗结转
     if (periodEndDate <= carryOverDeadlineStr && carryOverFromPreviousYear > 0) {
       const carryOverAvailable = Math.max(0, carryOverFromPreviousYear - currentStats.carryOverUsed);
       carryoverDays = Math.min(carryOverAvailable, remaining);
       remaining -= carryoverDays;
     }
 
-    // 其次消耗合同假期
     contractualDays = Math.min(currentStats.contractualRemaining, remaining);
     remaining -= contractualDays;
 
-    // 最后消耗基础法定假期
     statutoryDays = remaining;
 
     return { carryover: carryoverDays, contractual: contractualDays, statutory: statutoryDays };
   }
 
-  // 计算预览工作日（按年份拆分）
+  // 计算预览工作日（按年份拆分，按地区）
   const previewByYear = (formStartDate && formEndDate && formStartDate <= formEndDate)
-    ? countWorkDaysByYear(formStartDate, formEndDate)
+    ? countWorkDaysByYear(formStartDate, formEndDate, region)
     : [];
 
   const previewWorkDays = previewByYear.reduce((sum, p) => sum + p.days, 0);
@@ -122,72 +193,63 @@ function App() {
     return { ...p, ...alloc };
   });
 
-  // 添加假期记录
   const handleAddRecord = () => {
     if (!formStartDate || !formEndDate || formStartDate > formEndDate) {
-      alert('请选择有效的日期范围');
+      alert(t('alert.invalidDateRange'));
       return;
     }
 
-    const totalWorkDays = countWorkDays(formStartDate, formEndDate);
+    const totalWorkDays = countWorkDays(formStartDate, formEndDate, region);
     if (totalWorkDays === 0) {
-      alert('所选日期范围内没有工作日');
+      alert(t('alert.noWorkDays'));
       return;
     }
 
-    // 按年份拆分假期
-    const splitByYear = countWorkDaysByYear(formStartDate, formEndDate);
+    const splitByYear = countWorkDaysByYear(formStartDate, formEndDate, region);
     const createdAt = new Date().toISOString();
-    const description = formDescription || '假期';
+    // 备注只保存用户实际输入；类型 / 结转 / 拆分年份等由结构化字段承载
+    const description = formDescription.trim();
 
-    // 按优先级自动分配：结转法定 → 合同 → 基础法定
     const newRecords: VacationRecord[] = [];
     const tempRecords: VacationRecord[] = [...records];
 
     splitByYear.forEach((period) => {
-      const periodLabel = splitByYear.length > 1 ? `${period.year}年部分` : '';
-      const baseDescription = periodLabel ? `${description} (${periodLabel})` : description;
-
       const alloc = allocateDays(period.days, period.endDate, period.year, tempRecords);
 
-      // 结转法定天数
       if (alloc.carryover > 0) {
         newRecords.push({
           id: generateId(),
           startDate: period.startDate,
           endDate: period.endDate,
           workDays: alloc.carryover,
-          description: `${baseDescription}（结转优先）`,
+          description,
           type: 'statutory',
+          isCarryOver: true,
           year: period.year,
           createdAt,
         });
       }
 
-      // 合同天数
       if (alloc.contractual > 0) {
         newRecords.push({
           id: generateId(),
           startDate: period.startDate,
           endDate: period.endDate,
           workDays: alloc.contractual,
-          description: `${baseDescription}（合同假期）`,
+          description,
           type: 'contractual',
           year: period.year,
           createdAt,
         });
       }
 
-      // 基础法定天数
       if (alloc.statutory > 0) {
         newRecords.push({
           id: generateId(),
           startDate: period.startDate,
           endDate: period.endDate,
           workDays: alloc.statutory,
-          description: alloc.carryover === 0 && alloc.contractual === 0
-            ? baseDescription
-            : `${baseDescription}（法定假期）`,
+          description,
           type: 'statutory',
           year: period.year,
           createdAt,
@@ -202,25 +264,21 @@ function App() {
     setShowAddForm(false);
   };
 
-  // 删除记录
   const handleDeleteRecord = (id: string) => {
-    if (confirm('确定要删除这条记录吗？')) {
+    if (confirm(t('alert.confirmDelete'))) {
       setRecords((prev) => prev.filter((r) => r.id !== id));
     }
   };
 
-  // 重置表单
   const resetForm = () => {
     setFormStartDate('');
     setFormEndDate('');
     setFormDescription('');
   };
 
-  // 计算进度百分比
   const totalUsed = stats.statutoryUsed + stats.contractualUsed;
   const totalRemaining = stats.statutoryRemaining + stats.contractualRemaining;
 
-  // 判断今天的日期
   const today = formatDateString(new Date());
 
   const handleYearChange = (delta: number) => {
@@ -231,15 +289,61 @@ function App() {
     });
   };
 
+  const dash = t('modal.dash');
+
   return (
     <div className="app">
       <header className="header">
         <div className="header-content">
-          <div className="logo">
-            <Palmtree size={32} />
-            <h1>Urlaubsverwaltung</h1>
+          <div className="header-top">
+            <div className="logo">
+              <Palmtree size={32} />
+              <h1>{t('app.title')}</h1>
+            </div>
+            <div className="header-controls">
+              <label className="header-select">
+                <Globe size={16} />
+                <span className="sr-only">{t('header.language')}</span>
+                <select
+                  value={locale}
+                  onChange={(e) => setLocale(e.target.value as Locale)}
+                  aria-label={t('header.language')}
+                >
+                  {LOCALES.map((l) => (
+                    <option key={l.code} value={l.code}>{l.nativeLabel}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="header-select">
+                <MapPin size={16} />
+                <span className="sr-only">{t('header.region')}</span>
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value as RegionCode)}
+                  aria-label={t('header.region')}
+                >
+                  {REGIONS.map((r) => (
+                    <option key={r.code} value={r.code}>
+                      {locale === 'zh' ? r.nameZh : r.nameEn}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="header-icon-btn"
+                onClick={() => {
+                  setSettingsDraftDate(employmentStartDate);
+                  setShowSettings(true);
+                }}
+                aria-label={t('header.settings')}
+                title={t('header.settings')}
+              >
+                <Settings size={16} />
+              </button>
+            </div>
           </div>
-          <p className="subtitle">假期管理系统 · Baden-Württemberg</p>
+          <p className="subtitle">{t('app.subtitle')} · {regionLabel}</p>
         </div>
       </header>
 
@@ -266,7 +370,7 @@ function App() {
           <div className="stat-card main-stat">
             <div className="stat-header">
               <Sun size={24} />
-              <span>年度假期概览</span>
+              <span>{t('stats.yearlyOverview')}</span>
             </div>
             <div className="stat-progress">
               <div className="progress-bar">
@@ -283,23 +387,23 @@ function App() {
                 />
               </div>
               <div className="progress-labels">
-                <span>已用 {totalUsed} 天</span>
-                <span>剩余 {totalRemaining} 天</span>
+                <span>{t('stats.usedDays', { n: totalUsed })}</span>
+                <span>{t('stats.remainingDays', { n: totalRemaining })}</span>
               </div>
             </div>
             <div className="stat-breakdown">
               <div className="breakdown-item">
                 <span className="dot statutory" />
-                <span>法定假期 (Gesetzlich)</span>
+                <span>{t('stats.statutory')}</span>
                 <span className="breakdown-value">
-                  {stats.statutoryUsed} / {stats.statutoryTotal} 天
+                  {t('stats.usedOf', { used: stats.statutoryUsed, total: stats.statutoryTotal })}
                 </span>
               </div>
               <div className="breakdown-item">
                 <span className="dot contractual" />
-                <span>合同假期 (Vertraglich)</span>
+                <span>{t('stats.contractual')}</span>
                 <span className="breakdown-value">
-                  {stats.contractualUsed} / {stats.contractualTotal} 天
+                  {t('stats.usedOf', { used: stats.contractualUsed, total: stats.contractualTotal })}
                 </span>
               </div>
             </div>
@@ -310,17 +414,17 @@ function App() {
               <CheckCircle size={20} />
             </div>
             <div className="stat-info">
-              <span className="stat-label">法定假期剩余</span>
-              <span className="stat-value">{stats.statutoryRemaining} 天</span>
+              <span className="stat-label">{t('stats.statutoryRemaining')}</span>
+              <span className="stat-value">{t('stats.daysShort', { n: stats.statutoryRemaining })}</span>
               <span className="stat-sublabel">
-                总额 {stats.statutoryTotal} 天
-                {carryOverFromPreviousYear > 0 && `（含结转 ${carryOverFromPreviousYear} 天）`}
-                {stats.carryOverExpired > 0 && `，已过期 ${stats.carryOverExpired} 天`}
+                {t('stats.totalDays', { n: stats.statutoryTotal })}
+                {carryOverFromPreviousYear > 0 && t('stats.includesCarryOver', { n: carryOverFromPreviousYear })}
+                {stats.carryOverExpired > 0 && t('stats.expiredCarryOver', { n: stats.carryOverExpired })}
               </span>
             </div>
             <div className="stat-note">
               <Info size={14} />
-              <span>结转部分须在次年3月31日前使用</span>
+              <span>{t('stats.carryoverHint')}</span>
             </div>
           </div>
 
@@ -329,12 +433,12 @@ function App() {
               <AlertCircle size={20} />
             </div>
             <div className="stat-info">
-              <span className="stat-label">合同假期剩余</span>
-              <span className="stat-value">{stats.contractualRemaining} 天</span>
+              <span className="stat-label">{t('stats.contractualRemaining')}</span>
+              <span className="stat-value">{t('stats.daysShort', { n: stats.contractualRemaining })}</span>
             </div>
             <div className="stat-note warning">
               <Info size={14} />
-              <span>12月31日过期</span>
+              <span>{t('stats.contractualExpiryHint')}</span>
             </div>
           </div>
         </div>
@@ -346,14 +450,14 @@ function App() {
             onClick={() => setShowAddForm(true)}
           >
             <Plus size={18} />
-            记录假期
+            {t('actions.addRecord')}
           </button>
           <button
             className="btn btn-secondary"
             onClick={() => setShowHolidays(!showHolidays)}
           >
             <Calendar size={18} />
-            {showHolidays ? '隐藏公共假日' : '查看公共假日'}
+            {showHolidays ? t('actions.hideHolidays') : t('actions.showHolidays')}
           </button>
         </div>
 
@@ -361,9 +465,9 @@ function App() {
         {showAddForm && (
           <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
-              <h2>📅 记录假期</h2>
+              <h2>{t('modal.addTitle')}</h2>
               <div className="form-group">
-                <label>开始日期</label>
+                <label>{t('modal.startDate')}</label>
                 <input
                   type="date"
                   value={formStartDate}
@@ -371,7 +475,7 @@ function App() {
                 />
               </div>
               <div className="form-group">
-                <label>结束日期</label>
+                <label>{t('modal.endDate')}</label>
                 <input
                   type="date"
                   value={formEndDate}
@@ -380,35 +484,53 @@ function App() {
               </div>
               {(formStartDate || formEndDate) && (
                 <div className="date-summary">
-                  已选择日期：{formStartDate ? formatDisplayDate(formStartDate) : '—'} — {formEndDate ? formatDisplayDate(formEndDate) : '—'}
+                  {t('modal.dateSelected', {
+                    start: formStartDate ? formatDisplayDate(formStartDate) : dash,
+                    end: formEndDate ? formatDisplayDate(formEndDate) : dash,
+                  })}
                   <div className="date-summary-raw">
-                    原始值：{formStartDate || '—'} — {formEndDate || '—'}
+                    {t('modal.dateRaw', {
+                      start: formStartDate || dash,
+                      end: formEndDate || dash,
+                    })}
                   </div>
                 </div>
               )}
               {previewWorkDays > 0 && (
                 <div className="preview-days">
                   <div className="preview-header">
-                    <span>消耗假期天数：</span>
-                    <strong>{previewWorkDays} 天</strong>
+                    <span>{t('modal.consumeDays')}</span>
+                    <strong>{t('modal.daysValue', { n: previewWorkDays })}</strong>
                   </div>
-                  <div className="preview-note">（已自动排除周末和公共假日）</div>
+                  <div className="preview-note">{t('modal.autoExclude')}</div>
                   {previewByYear.length > 0 && (
                     <div className="preview-split">
                       <div className="split-title">
-                        {previewByYear.length > 1 ? '⚠️ 跨年假期，将按年份自动拆分：' : '按年份计入配额：'}
+                        {previewByYear.length > 1 ? t('modal.crossYearTitle') : t('modal.byYearTitle')}
                       </div>
                       {previewAllocations.map((p) => (
                         <div key={p.year} className="split-item">
-                          <span>{p.year}年：</span>
-                          <strong>{p.days} 天</strong>
+                          <span>{t('modal.yearLabel', { year: p.year })}</span>
+                          <strong>{t('modal.daysValue', { n: p.days })}</strong>
                           <span className="split-dates">
                             ({formatDisplayDate(p.startDate)} - {formatDisplayDate(p.endDate)})
                           </span>
                           <span className="split-alloc">
-                            {p.carryover > 0 && <span className="alloc-tag carryover">结转 {p.carryover}天</span>}
-                            {p.contractual > 0 && <span className="alloc-tag contractual">合同 {p.contractual}天</span>}
-                            {p.statutory > 0 && <span className="alloc-tag statutory">法定 {p.statutory}天</span>}
+                            {p.carryover > 0 && (
+                              <span className="alloc-tag carryover">
+                                {t('modal.tagCarryover', { n: p.carryover })}
+                              </span>
+                            )}
+                            {p.contractual > 0 && (
+                              <span className="alloc-tag contractual">
+                                {t('modal.tagContractual', { n: p.contractual })}
+                              </span>
+                            )}
+                            {p.statutory > 0 && (
+                              <span className="alloc-tag statutory">
+                                {t('modal.tagStatutory', { n: p.statutory })}
+                              </span>
+                            )}
                           </span>
                         </div>
                       ))}
@@ -419,26 +541,24 @@ function App() {
               {carryOverFromPreviousYear > 0 && formEndDate && formEndDate <= `${selectedYear}-03-31` && (
                 <div className="carryover-hint">
                   <Info size={14} />
-                  <span>
-                    3月31日前有结转法定假期，将优先使用结转天数
-                  </span>
+                  <span>{t('modal.carryoverHint')}</span>
                 </div>
               )}
               <div className="form-group">
-                <label>备注（可选）</label>
+                <label>{t('modal.descLabel')}</label>
                 <input
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="例如：圣诞假期、回国探亲..."
+                  placeholder={t('modal.descPlaceholder')}
                 />
               </div>
               <div className="modal-actions">
                 <button className="btn btn-ghost" onClick={() => setShowAddForm(false)}>
-                  取消
+                  {t('modal.cancel')}
                 </button>
                 <button className="btn btn-primary" onClick={handleAddRecord}>
-                  保存
+                  {t('modal.save')}
                 </button>
               </div>
             </div>
@@ -448,10 +568,11 @@ function App() {
         {/* 公共假日列表 */}
         {showHolidays && (
           <div className="section">
-            <h2>🎌 {selectedYear}年 巴登-符腾堡州公共假日</h2>
+            <h2>{t('records.holidaysTitle', { year: selectedYear, region: regionLabel })}</h2>
             <div className="holidays-grid">
               {publicHolidays.map((holiday) => {
                 const isPast = holiday.date < today;
+                const localizedName = locale === 'zh' ? holiday.nameZh : holiday.nameEn;
                 return (
                   <div
                     key={holiday.date}
@@ -460,7 +581,7 @@ function App() {
                     <div className="holiday-date">
                       {formatDisplayDate(holiday.date)}
                     </div>
-                    <div className="holiday-name">{holiday.nameZh}</div>
+                    <div className="holiday-name">{localizedName}</div>
                     <div className="holiday-name-de">{holiday.name}</div>
                   </div>
                 );
@@ -471,82 +592,215 @@ function App() {
 
         {/* 假期记录列表 */}
         <div className="section">
-          <h2>📋 {selectedYear}年 假期记录</h2>
+          <h2>{t('records.title', { year: selectedYear })}</h2>
           <div className="year-summary">
-            本年度：已用 <strong>{stats.statutoryUsed}</strong> 天法定 + <strong>{stats.contractualUsed}</strong> 天合同 = 共 <strong>{stats.statutoryUsed + stats.contractualUsed}</strong> 天
+            {t('records.summary', {
+              statutory: stats.statutoryUsed,
+              contractual: stats.contractualUsed,
+              total: stats.statutoryUsed + stats.contractualUsed,
+            })}
           </div>
           {yearRecords.length === 0 ? (
             <div className="empty-state">
               <Palmtree size={48} />
-              <p>暂无假期记录</p>
-              <p className="empty-hint">点击"记录假期"开始添加</p>
+              <p>{t('records.empty')}</p>
+              <p className="empty-hint">{t('records.emptyHint')}</p>
             </div>
           ) : (
             <div className="records-list">
-              {yearRecords.map((record) => (
-                <div key={record.id} className="record-card">
-                  <div className="record-dates">
-                    <span className="record-range">
-                      {formatDisplayDate(record.startDate)}
-                      {record.startDate !== record.endDate && (
-                        <> — {formatDisplayDate(record.endDate)}</>
-                      )}
-                    </span>
-                    <div className="record-tags">
-                      <span className={`record-type ${record.type}`}>
-                        {record.type === 'statutory' ? '法定' : '合同'}
-                      </span>
-                      <span className="record-year">计入{record.year}年</span>
+              {(() => {
+                // 同一次提交（同 start/end/createdAt）的多条记录，把范围内的工作日按
+                // 「结转 → 合同 → 法定」的优先级切片，分别归给各条记录，避免重复列出相同日期
+                const dateMap = new Map<string, string[]>();
+                const groups = new Map<string, VacationRecord[]>();
+                for (const r of yearRecords) {
+                  const key = `${r.startDate}__${r.endDate}__${r.createdAt}`;
+                  const arr = groups.get(key);
+                  if (arr) arr.push(r);
+                  else groups.set(key, [r]);
+                }
+                for (const group of groups.values()) {
+                  const sample = group[0];
+                  const allDates = getWorkDayDates(sample.startDate, sample.endDate, region);
+                  const priority = (r: VacationRecord) =>
+                    r.isCarryOver ? 0 : r.type === 'contractual' ? 1 : 2;
+                  const sorted = [...group].sort((a, b) => priority(a) - priority(b));
+                  let cursor = 0;
+                  for (const r of sorted) {
+                    dateMap.set(r.id, allDates.slice(cursor, cursor + r.workDays));
+                    cursor += r.workDays;
+                  }
+                }
+                return yearRecords.map((record) => {
+                const kind: 'carryover' | 'contractual' | 'statutory' =
+                  record.isCarryOver ? 'carryover' : record.type;
+                const kindLabelKey =
+                  kind === 'carryover'
+                    ? 'records.carryover'
+                    : kind === 'contractual'
+                      ? 'records.contractual'
+                      : 'records.statutory';
+                const consumeKey =
+                  kind === 'carryover'
+                    ? 'records.consumeCarryover'
+                    : kind === 'contractual'
+                      ? 'records.consumeContractual'
+                      : 'records.consumeStatutory';
+                const workDayDates = dateMap.get(record.id) ?? [];
+                const workDayLabel = workDayDates.map(formatShortDate).join(', ');
+                return (
+                  <div key={record.id} className="record-card">
+                    <div className="record-row-main">
+                      <div className="record-dates">
+                        <span className="record-range">
+                          {formatDisplayDate(record.startDate)}
+                          {record.startDate !== record.endDate && (
+                            <> — {formatDisplayDate(record.endDate)}</>
+                          )}
+                        </span>
+                        <div className="record-tags">
+                          <span className={`record-type ${kind}`}>{t(kindLabelKey)}</span>
+                          <span className="record-year">
+                            {t('records.belongsToYear', { year: record.year })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="record-info">
+                        <span className="record-days">{t(consumeKey, { n: record.workDays })}</span>
+                        {record.description && (
+                          <span className="record-desc">{record.description}</span>
+                        )}
+                      </div>
+                      <button
+                        className="record-delete"
+                        onClick={() => handleDeleteRecord(record.id)}
+                        title={t('records.deleteTitle')}
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                  </div>
-                  <div className="record-info">
-                    <span className="record-days">消耗 {record.workDays} 天假期</span>
-                    {record.description && (
-                      <span className="record-desc">{record.description}</span>
+                    {workDayDates.length > 0 && (
+                      <div className="record-workdays">
+                        {t('records.workdayDates', { dates: workDayLabel })}
+                      </div>
                     )}
                   </div>
-                  <button
-                    className="record-delete"
-                    onClick={() => handleDeleteRecord(record.id)}
-                    title="删除记录"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
+                );
+                });
+              })()}
             </div>
           )}
         </div>
 
         {/* 规则说明 */}
         <div className="section rules">
-          <h2>📖 假期规则说明</h2>
+          <h2>{t('rules.title')}</h2>
           <div className="rules-content">
             <div className="rule-item">
-              <h4>年假总额</h4>
-              <p>每年28天假期（基于五天工作周）= 20天法定假期 + 8天合同额外假期</p>
+              <h4>{t('rules.totalTitle')}</h4>
+              <p>{t('rules.totalBody')}</p>
             </div>
             <div className="rule-item">
-              <h4>假期过期</h4>
+              <h4>{t('rules.expiryTitle')}</h4>
               <p>
-                <strong>合同假期</strong>：每年12月31日过期，不可结转<br />
-                <strong>法定假期</strong>：如因病无法休假，可结转至次年3月31日（15个月）
+                <strong>{t('rules.expiryBodyContractual')}</strong>{t('rules.expiryBodyContractualDesc')}<br />
+                <strong>{t('rules.expiryBodyStatutory')}</strong>{t('rules.expiryBodyStatutoryDesc')}
               </p>
             </div>
             <div className="rule-item">
-              <h4>离职规则</h4>
-              <p>
-                下半年离职时，假期按月份比例计算（不低于法定最低假期）；
-                剩余假期需在离职期内休完，合同额外假期在离职时失效
-              </p>
+              <h4>{t('rules.leaveTitle')}</h4>
+              <p>{t('rules.leaveBody')}</p>
             </div>
           </div>
         </div>
       </main>
 
       <footer className="footer">
-        <p>Urlaubsverwaltung für Baden-Württemberg · {new Date().getFullYear()}</p>
+        <p>{t('app.footer', { region: regionLabel, year: new Date().getFullYear() })}</p>
       </footer>
+
+      {/* 设置模态框（手动打开） */}
+      {showSettings && (
+        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>{t('settings.title')}</h2>
+            <div className="form-group">
+              <label>{t('settings.employmentStartLabel')}</label>
+              <input
+                type="date"
+                value={settingsDraftDate}
+                onChange={(e) => setSettingsDraftDate(e.target.value)}
+              />
+              <p className="form-hint">{t('settings.employmentStartHint')}</p>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowSettings(false)}
+              >
+                {t('settings.cancel')}
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={!isValidIsoDate(settingsDraftDate)}
+                onClick={() => {
+                  if (!isValidIsoDate(settingsDraftDate)) return;
+                  setEmploymentStartDate(settingsDraftDate);
+                  setShowSettings(false);
+                }}
+              >
+                {t('settings.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 首次访问的欢迎/必填模态框 —— 始终使用英文，避免老用户残留的中文偏好让新同事困惑；
+          不允许通过点击遮罩关闭，必须填合法日期才能进入主界面 */}
+      {showWelcome && (() => {
+        const tw = getTranslator('en');
+        return (
+          <div className="modal-overlay welcome-overlay">
+            <div className="modal welcome-modal" onClick={(e) => e.stopPropagation()}>
+              <h2>{tw('welcome.title')}</h2>
+              <p className="welcome-body">{tw('welcome.body')}</p>
+              <div className="form-group">
+                <label>{tw('settings.employmentStartLabel')}</label>
+                <input
+                  type="date"
+                  value={welcomeDraftDate}
+                  onChange={(e) => {
+                    setWelcomeDraftDate(e.target.value);
+                    if (e.target.value) setWelcomeError(false);
+                  }}
+                />
+                {welcomeError && (
+                  <p className="form-error">{tw('welcome.required')}</p>
+                )}
+              </div>
+              <div className="modal-actions">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    if (!isValidIsoDate(welcomeDraftDate)) {
+                      setWelcomeError(true);
+                      return;
+                    }
+                    setEmploymentStartDate(welcomeDraftDate);
+                    // 欢迎模态固定英文显示，所以完成欢迎后默认整个应用也用英文，
+                    // 覆盖浏览器里可能残留的旧语言偏好；用户随时可在 header 切回。
+                    setLocale('en');
+                    setShowWelcome(false);
+                  }}
+                >
+                  {tw('welcome.continue')}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

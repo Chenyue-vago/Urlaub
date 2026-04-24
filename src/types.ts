@@ -7,8 +7,13 @@ export interface VacationRecord {
   startDate: string; // ISO date string
   endDate: string;   // ISO date string
   workDays: number;  // 实际工作日数量（排除周末和公共假日）
-  description: string;
+  description: string; // 仅保存用户原始备注；不再写入"（合同假期）/（法定假期）"等本地化后缀
   type: VacationType;
+  /**
+   * 是否消耗的是上一年结转的法定假期。
+   * 仅在 `type === 'statutory'` 时可能为 true。展示时显示为「结转 / Carry-over」。
+   */
+  isCarryOver?: boolean;
   year: number;      // 该假期属于哪一年的配额
   createdAt: string;
 }
@@ -16,8 +21,9 @@ export interface VacationRecord {
 // 公共假日
 export interface PublicHoliday {
   date: string;
-  name: string;
-  nameZh: string;
+  name: string;     // 德语原名
+  nameEn: string;   // 英文名
+  nameZh: string;   // 中文名
 }
 
 // 年度假期统计
