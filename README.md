@@ -1,19 +1,19 @@
 # Urlaubsverwaltung
 
-A simple **personal** vacation tracker for employees in Germany — for keeping your own records, **not** an HR or company management tool.
+A simple **personal** vacation tracker for VAGO employees — for keeping your own records, **not** an HR or company management tool.
 
 > 🔗 **Live app**: <https://chenyue-vago.github.io/Urlaub/>
 
-It calculates your German statutory + contractual vacation entitlement, knows the public holidays of your federal state, handles carry-over and cross-year vacations, and stores everything privately in your own browser — no account, no server, no shared data, no manager view.
+It calculates your German statutory + contractual vacation entitlement, knows the public holidays of your federal state, handles carry-over and cross-year vacations, and stores everything privately in your own browser.
 
 ## Getting started
 
-Open the link above. On first visit you'll be asked for your **employment start date** — used to pro-rate your entitlement for the year you joined (later years always use the full 28 days).
+Open the link above. On first visit you'll be asked for your **employment start date** — used to pro-rate your entitlement for the year you joined.
 
 Then in the top-right header you can:
 
 - 🌐 Switch **language** between English and 中文.
-- 📍 Pick your **region** (German federal state, `Bundesland`) so public holidays match.
+- 📍 Pick your **region** (German federal state) so public holidays match.
 - ⚙️ Open **Settings** to change the start date later, or back up / restore your data.
 
 ## Recording a vacation
@@ -37,8 +37,6 @@ To stay safe, use **⚙️ Settings → 💾 Backup & restore** regularly:
 
 - 📤 **Export backup** — downloads a `urlaub-backup-YYYY-MM-DD.json` file. Save it somewhere safe (cloud drive, email to yourself, USB…).
 - 📥 **Import backup** — pick a previously-exported file. **Overwrites** all current data, then reloads.
-
-Tip: export once after adding several records, and again every few months as a manual snapshot. Always export before clearing browser data, switching machines, or using a different browser.
 
 ---
 
