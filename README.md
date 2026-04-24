@@ -63,7 +63,17 @@ In your browser only — under `localStorage` keys starting with `urlaub_`:
 - `urlaub_region` — your selected `Bundesland`
 - `urlaub_selected_year` — last viewed year
 
-This means data is **not synced** between browsers, devices, or incognito windows. Clearing site data wipes everything.
+### To keep your records, always open the app from the same place
+
+`localStorage` is scoped per **browser** *and* per **origin** (`scheme://host:port`). To make sure your vacation entries are still there next time you open the app:
+
+- **Same browser, same profile.** Records you added in Chrome won't show up in Firefox, in another Chrome user profile, or in an incognito/private window — each has its own isolated `localStorage`.
+- **Same machine.** Records on your laptop won't appear on your phone, your work desktop, or any colleague's machine.
+- **Same URL — same host *and* port.** The URL `http://localhost:5173` is a different origin from `http://localhost:5174`, `http://127.0.0.1:5173`, or `http://192.168.178.33:5173`. Each origin has its own `localStorage`. So always start the dev server with the **same port** (`npm run dev -- --port 5173`) and always open it via the **same URL** you used last time.
+- **Don't use incognito / private windows for real data.** Their `localStorage` is wiped the moment you close the last incognito window.
+- **Avoid "Clear site data" / "Clear browsing data → Cookies and site data"** for this site, otherwise everything is gone.
+
+There is no backup, no export, no cloud sync — if you wipe `localStorage`, the data is gone for good.
 
 ## Build for production
 
