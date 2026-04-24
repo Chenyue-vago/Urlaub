@@ -397,7 +397,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: var(--color-text-muted);
   margin-top: 0.75rem;
   padding-top: 0.75rem;
@@ -411,7 +411,7 @@ body {
 }
 
 .stat-sublabel {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: var(--color-text-muted);
   margin-top: 0.1rem;
 }
