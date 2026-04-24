@@ -17,7 +17,23 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173.
+Then open the URL printed in the terminal (default: http://localhost:5173).
+
+If port `5173` is already in use, Vite will automatically pick the next free port (5174, 5175, …) — just use whatever URL it prints. To pin a specific port instead, pass it on the command line:
+
+```bash
+npm run dev -- --port 3000        # use port 3000
+npm run dev -- --port 3000 --host # also expose on your LAN
+```
+
+Or set it permanently in `vite.config.ts`:
+
+```ts
+export default defineConfig({
+  plugins: [react()],
+  server: { port: 3000 },
+})
+```
 
 ## First-time use
 
