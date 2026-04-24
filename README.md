@@ -7,9 +7,8 @@ A simple personal vacation tracker for employees working in Germany. Built with 
 - **Yearly entitlement**: 20 statutory (`Gesetzlich`) + 8 contractual (`Vertraglich`) days, pro-rated for the year you joined.
 - **Carry-over awareness**: unused statutory days carry into the next year and expire on March 31. The app prioritizes carry-over for vacations ending on or before that deadline.
 - **Region-aware public holidays**: pick your German federal state (`Bundesland`) and the workday calculation automatically excludes the right public holidays.
-- **Multi-language**: English (default) and Chinese, switchable any time.
 - **Cross-year vacations**: a vacation that spans New Year is automatically split and counted against the right year's quota.
-- **Per-record day list**: each record shows the exact `DD.MM.` workdays it consumed; for a vacation split across carry-over and contractual buckets, each split shows only its own days.
+- **Per-record day list**: each record shows the exact `DD.MM.` workdays it consumed. When a single vacation is split across multiple buckets (carry-over → contractual → statutory, in that priority order), each split lists only the days assigned to it instead of repeating the full range.
 
 ## Quick start
 
