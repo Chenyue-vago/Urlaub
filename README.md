@@ -54,24 +54,11 @@ Click **Record Vacation**, pick a date range, and (optionally) add a note. The a
 - Show how many workdays you'd use, and split them by carry-over / contractual / statutory before you save.
 - For ranges that cross a year boundary, split the entry per year so each year's quota is updated correctly.
 
-## Where is my data?
-
-In your browser only — under `localStorage` keys starting with `urlaub_`:
-
-- `urlaub_manager_data` — your vacation records
-- `urlaub_employment_start` — your start date
-- `urlaub_language` — your preferred language
-- `urlaub_region` — your selected `Bundesland`
-- `urlaub_selected_year` — last viewed year
-
 ### To keep your records, always open the app from the same place
 
 `localStorage` is scoped per **browser** *and* per **origin** (`scheme://host:port`). To make sure your vacation entries are still there next time you open the app:
 
-- **Same browser, same profile.** Records you added in Chrome won't show up in Firefox, in another Chrome user profile, or in an incognito/private window — each has its own isolated `localStorage`.
-- **Same machine.** Records on your laptop won't appear on your phone, your work desktop, or any colleague's machine.
-- **Same URL — same host *and* port.** The URL `http://localhost:5173` is a different origin from `http://localhost:5174`, `http://127.0.0.1:5173`, or `http://192.168.178.33:5173`. Each origin has its own `localStorage`. So always start the dev server with the **same port** (`npm run dev -- --port 5173`) and always open it via the **same URL** you used last time.
-- **Don't use incognito / private windows for real data.** Their `localStorage` is wiped the moment you close the last incognito window.
+- **Same machine, same browser, same profile** Records you added in Chrome won't show up in Firefox, in another Chrome user profile, or in an incognito/private window — each has its own isolated `localStorage`.
 - **Avoid "Clear site data" / "Clear browsing data → Cookies and site data"** for this site, otherwise everything is gone.
 
 If you need to switch browsers, machines, ports, or want a safety net before clearing site data, use the built-in **Backup & restore** below.
@@ -83,38 +70,25 @@ Open the **gear icon** at the top right and use the **💾 Backup & restore** se
 - **📤 Export backup** — downloads a `urlaub-backup-YYYY-MM-DD.json` file containing all your data (records, employment start date, language, region, last viewed year). Save this somewhere safe (cloud drive, email to yourself, USB, …).
 - **📥 Import backup** — pick a previously-exported JSON file. After confirming, the file's contents **overwrite** everything currently in `localStorage` and the page reloads.
 
-Practical tips:
+## Deploy to GitHub Pages
 
-- Export once after adding several records, and again every few months as a manual backup.
-- When moving to a new browser / machine / port: export from the old one first, then import on the new one.
-- The file is plain JSON — you can open it in any text editor to inspect or hand-edit before importing.
-- Import is **destructive**: it replaces all current data with what's in the file. There is no merge across multiple devices, so don't edit the same data on two devices in parallel and expect both sets of edits to survive an import.
+This repo ships a workflow at `.github/workflows/deploy.yml` that builds the app and deploys it to GitHub Pages on every push to `main`.
 
-## Build for production
+**One-time setup** (only the repo owner does this, once):
 
-```bash
-npm run build       # type-check + bundle into dist/
-npm run preview     # serve the bundled output locally
-```
+1. Push the workflow to `main`.
+2. On GitHub, open the repo → **Settings → Pages**.
+3. Under **Build and deployment → Source**, choose **GitHub Actions** (not "Deploy from a branch").
+4. Push anything to `main` (or open the **Actions** tab and re-run the latest "Deploy to GitHub Pages" workflow). When it goes green, the site is live at:
 
-The bundled `dist/` folder is fully static and can be hosted on any static file host (Netlify, Vercel, Cloudflare Pages, GitHub Pages, an Nginx server, …).
+   ```
+   https://<github-user>.github.io/<repo-name>/
+   ```
 
-## Project layout
+   For this repo: <https://chenyue-vago.github.io/Urlaub/>.
 
-```
-src/
-  App.tsx          # main UI
-  i18n.ts          # English / Chinese dictionaries + LanguageProvider
-  regions.ts       # 16 German Bundesländer
-  holidays.ts      # public-holiday lookup via date-holidays-parser
-  utils.ts         # date math, allocation logic, localStorage helpers
-  data/            # extracted Germany-only holiday data (auto-generated)
-  types.ts         # shared TypeScript types
-scripts/
-  extract-de-holidays.mjs   # runs before dev/build to keep src/data/de-holidays.json minimal
-```
+**Notes**:
 
-## Tech notes
-
-- Public holidays are computed offline using [`date-holidays-parser`](https://github.com/commenthol/date-holidays-parser) with a Germany-only data slice extracted at build time, keeping the bundle small while staying accurate.
-- `npm run dev` and `npm run build` automatically run the extraction script via `predev` / `prebuild` hooks.
+- `vite.config.ts` sets `base: '/Urlaub/'` only at build time so all asset URLs resolve under the repo subpath. If you fork to a repo with a different name, change this string.
+- `public/robots.txt` (`Disallow: /`) and a `<meta name="robots" content="noindex, nofollow" />` in `index.html` ask search engines not to index the site, since this is a personal tracker, not a public service. The URL is still publicly reachable to anyone you share it with — there is no login.
+- All data still lives in each user's own browser `localStorage`. Deploying does not create any shared backend.

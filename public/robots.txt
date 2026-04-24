@@ -1,0 +1,4 @@
+# This is a personal vacation tracker, not a public service.
+# Please do not index or crawl.
+User-agent: *
+Disallow: /
