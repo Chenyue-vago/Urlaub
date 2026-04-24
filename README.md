@@ -1,10 +1,10 @@
 # Urlaubsverwaltung
 
-A simple personal vacation tracker for employees in Germany.
+A simple **personal** vacation tracker for employees in Germany — for keeping your own records, **not** an HR or company management tool.
 
 > 🔗 **Live app**: <https://chenyue-vago.github.io/Urlaub/>
 
-It calculates your German statutory + contractual vacation entitlement, knows the public holidays of your federal state, handles carry-over and cross-year vacations, and stores everything privately in your own browser — no account, no server, no shared data.
+It calculates your German statutory + contractual vacation entitlement, knows the public holidays of your federal state, handles carry-over and cross-year vacations, and stores everything privately in your own browser — no account, no server, no shared data, no manager view.
 
 ## Getting started
 
