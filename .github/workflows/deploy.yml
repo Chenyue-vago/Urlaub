@@ -3,6 +3,12 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
   workflow_dispatch:
 
 permissions:
