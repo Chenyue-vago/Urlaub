@@ -21,6 +21,7 @@ const zh: Dict = {
   'header.language': '语言',
   'header.region': '地区',
   'header.settings': '设置',
+  'header.signedInAs': '当前登录：{name}',
 
   'settings.title': '⚙️ 设置',
   'settings.employmentStartLabel': '入职日期',
@@ -44,6 +45,11 @@ const zh: Dict = {
   'auth.errorGeneric': '出错了，请重试。',
   'auth.deactivated': '你的账号已被停用，请联系管理员。',
   'auth.signOut': '退出登录',
+  'auth.loginHint': '欢迎回来，登录以继续。',
+  'auth.signupHint': '创建账号，开始记录假期。',
+  'auth.featureStatutory': '法定与合同假期',
+  'auth.featureHolidays': '按地区公共假日',
+  'auth.featureCarryover': '结转追踪',
   // navigation
   'nav.dashboard': '面板',
   'nav.admin': '管理',
@@ -156,6 +162,7 @@ const en: Dict = {
   'header.language': 'Language',
   'header.region': 'Region',
   'header.settings': 'Settings',
+  'header.signedInAs': 'Signed in as {name}',
 
   'settings.title': '⚙️ Settings',
   'settings.employmentStartLabel': 'Employment start date',
@@ -179,6 +186,11 @@ const en: Dict = {
   'auth.errorGeneric': 'Something went wrong. Please try again.',
   'auth.deactivated': 'Your account has been deactivated. Contact an administrator.',
   'auth.signOut': 'Sign out',
+  'auth.loginHint': 'Welcome back — sign in to continue.',
+  'auth.signupHint': 'Create an account to start tracking days off.',
+  'auth.featureStatutory': 'Statutory & contractual days',
+  'auth.featureHolidays': 'Public holidays by region',
+  'auth.featureCarryover': 'Carry-over tracking',
   // navigation
   'nav.dashboard': 'Dashboard',
   'nav.admin': 'Admin',

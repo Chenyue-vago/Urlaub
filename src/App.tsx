@@ -34,6 +34,25 @@ import { YearNav } from './components/dashboard/YearNav';
 import { StatsCards } from './components/dashboard/StatsCards';
 import { RecordModal } from './components/dashboard/RecordModal';
 import { RecordList } from './components/dashboard/RecordList';
+import { Profile } from './types';
+
+function getUserLabel(profile: Profile): string {
+  const name = profile.displayName?.trim();
+  return name || profile.email;
+}
+
+function getUserInitials(profile: Profile): string {
+  const name = profile.displayName?.trim();
+  if (name) {
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+  const local = profile.email.split('@')[0] ?? profile.email;
+  return local.slice(0, 2).toUpperCase();
+}
 
 function App() {
   const { locale, setLocale, t } = useTranslation();
@@ -253,6 +272,24 @@ function App() {
               <h1>{t('app.title')}</h1>
             </div>
             <div className="header-controls">
+              <div
+                className="header-user"
+                title={profile.email}
+                aria-label={t('header.signedInAs', { name: getUserLabel(profile) })}
+              >
+                <span className="header-user-avatar" aria-hidden="true">
+                  {getUserInitials(profile)}
+                </span>
+                <span className="header-user-text">
+                  <span className="header-user-name">{getUserLabel(profile)}</span>
+                  {profile.displayName?.trim() && (
+                    <span className="header-user-email">{profile.email}</span>
+                  )}
+                </span>
+                {isAdmin && (
+                  <span className="header-user-badge">{t('nav.admin')}</span>
+                )}
+              </div>
               <label className="header-select">
                 <Globe size={16} />
                 <span className="sr-only">{t('header.language')}</span>
