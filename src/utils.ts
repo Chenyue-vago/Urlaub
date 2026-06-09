@@ -14,11 +14,6 @@ export const DEFAULT_ENTITLEMENT: EntitlementConfig = {
   carryOverDeadline: '03-31',
 };
 
-// 生成唯一ID
-export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
-}
-
 // 格式化日期为 YYYY-MM-DD
 export function formatDateString(date: Date): string {
   const year = date.getFullYear();
@@ -239,120 +234,6 @@ export function calculateCarryOver(
   const stats = calculateYearlyStats(records, fromYear, 0, employmentStartDate, config);
   // 只有法定假期可以结转
   return stats.statutoryRemaining;
-}
-
-// 本地存储键
-const STORAGE_KEY = 'urlaub_manager_data';
-
-// 备份/恢复涉及的所有 localStorage key —— 与 App.tsx / i18n.ts / 各 useState 初值保持一致。
-// 新增 key 时记得同步加进来，否则备份文件不会包含它。
-export const ALL_STORAGE_KEYS = [
-  'urlaub_manager_data',
-  'urlaub_employment_start',
-  'urlaub_language',
-  'urlaub_region',
-  'urlaub_selected_year',
-] as const;
-
-export interface BackupFile {
-  schemaVersion: number;
-  exportedAt: string;
-  data: Record<string, string>;
-}
-
-export function exportAllData(): BackupFile {
-  const data: Record<string, string> = {};
-  for (const key of ALL_STORAGE_KEYS) {
-    const value = localStorage.getItem(key);
-    if (value !== null) data[key] = value;
-  }
-  return {
-    schemaVersion: 1,
-    exportedAt: new Date().toISOString(),
-    data,
-  };
-}
-
-// 校验并把备份内容写回 localStorage。返回写入了多少条 key（供 UI 提示）。
-// 任何非预期结构都抛错，由调用方决定怎么提示用户。
-export function importAllData(parsed: unknown): { count: number } {
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('invalid backup file');
-  }
-  const root = parsed as { data?: unknown };
-  if (!root.data || typeof root.data !== 'object') {
-    throw new Error('missing data field');
-  }
-  const data = root.data as Record<string, unknown>;
-  let count = 0;
-  for (const key of ALL_STORAGE_KEYS) {
-    if (key in data) {
-      const value = data[key];
-      if (typeof value === 'string') {
-        localStorage.setItem(key, value);
-        count++;
-      }
-    }
-  }
-  if (count === 0) {
-    throw new Error('no recognised keys');
-  }
-  return { count };
-}
-
-// 保存数据到本地存储
-export function saveToStorage(records: VacationRecord[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-}
-
-// 旧版本会把本地化后缀写入 description，这里在加载时做一次性迁移：
-// - 检测到「（结转优先）/(carry-over first)」时设置 isCarryOver = true
-// - 删除自动生成的后缀（结转优先/合同假期/法定假期，及其英文对应）
-// - 删除按年拆分时自动追加的「(YYYY年部分) / (Part of YYYY)」标记
-// - 默认占位词 "假期" / "Vacation" 视为空备注
-function migrateRecord(raw: Partial<VacationRecord> & { description?: string }): VacationRecord {
-  const original = raw.description ?? '';
-  const carryOverHinted =
-    original.includes('（结转优先）') || /\(carry-over first\)/i.test(original);
-
-  const cleaned = original
-    .replace(/（结转优先）/g, '')
-    .replace(/（合同假期）/g, '')
-    .replace(/（法定假期）/g, '')
-    .replace(/\s*\(carry-over first\)/gi, '')
-    .replace(/\s*\(contractual\)/gi, '')
-    .replace(/\s*\(statutory\)/gi, '')
-    .replace(/\s*\(\d+年部分\)/g, '')
-    .replace(/\s*\(Part of \d+\)/gi, '')
-    .trim();
-
-  const isPlaceholderOnly = cleaned === '假期' || cleaned === 'Vacation';
-  const description = isPlaceholderOnly ? '' : cleaned;
-
-  return {
-    id: String(raw.id ?? ''),
-    startDate: String(raw.startDate ?? ''),
-    endDate: String(raw.endDate ?? ''),
-    workDays: Number(raw.workDays ?? 0),
-    description,
-    type: (raw.type as VacationRecord['type']) ?? 'statutory',
-    isCarryOver: raw.isCarryOver === true || (carryOverHinted && raw.type !== 'contractual'),
-    year: Number(raw.year ?? new Date().getFullYear()),
-    createdAt: String(raw.createdAt ?? new Date().toISOString()),
-  };
-}
-
-// 从本地存储加载数据
-export function loadFromStorage(): VacationRecord[] {
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) return [];
-  try {
-    const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map(migrateRecord);
-  } catch {
-    return [];
-  }
 }
 
 // 格式化显示日期 (德国格式 DD.MM.YYYY)

@@ -1033,3 +1033,11 @@ body {
 .auth-card form .btn { width: 100%; margin-top: 0.5rem; }
 .form-info { color: #166534; font-size: 0.9rem; }
 .toast-success { background: #16a34a; }
+
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+  color: #6b7280;
+}
