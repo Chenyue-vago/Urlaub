@@ -2,12 +2,17 @@ import { VacationRecord, YearlyVacationStats } from './types';
 import { getPublicHolidays, isPublicHoliday } from './holidays';
 import { RegionCode, DEFAULT_REGION } from './regions';
 
-// 德国法定最低假期天数
-export const STATUTORY_VACATION_DAYS = 20;
-// 合同额外假期天数
-export const CONTRACTUAL_VACATION_DAYS = 8;
-// 总假期天数
-export const TOTAL_VACATION_DAYS = STATUTORY_VACATION_DAYS + CONTRACTUAL_VACATION_DAYS;
+export interface EntitlementConfig {
+  statutoryDays: number;
+  contractualDays: number;
+  carryOverDeadline: string; // 'MM-DD'
+}
+
+export const DEFAULT_ENTITLEMENT: EntitlementConfig = {
+  statutoryDays: 20,
+  contractualDays: 8,
+  carryOverDeadline: '03-31',
+};
 
 // 生成唯一ID
 export function generateId(): string {
@@ -131,12 +136,13 @@ export function countWorkDaysByYear(
 // 计算年度假期统计
 export function getYearlyEntitlement(
   year: number,
-  employmentStartDate?: string
+  employmentStartDate?: string,
+  config: EntitlementConfig = DEFAULT_ENTITLEMENT
 ): { statutoryTotal: number; contractualTotal: number } {
   if (!employmentStartDate) {
     return {
-      statutoryTotal: STATUTORY_VACATION_DAYS,
-      contractualTotal: CONTRACTUAL_VACATION_DAYS,
+      statutoryTotal: config.statutoryDays,
+      contractualTotal: config.contractualDays,
     };
   }
 
@@ -151,14 +157,14 @@ export function getYearlyEntitlement(
   if (year === startYear) {
     const monthsEligible = 12 - startMonthIndex;
     return {
-      statutoryTotal: Math.ceil((STATUTORY_VACATION_DAYS * monthsEligible) / 12),
-      contractualTotal: Math.ceil((CONTRACTUAL_VACATION_DAYS * monthsEligible) / 12),
+      statutoryTotal: Math.ceil((config.statutoryDays * monthsEligible) / 12),
+      contractualTotal: Math.ceil((config.contractualDays * monthsEligible) / 12),
     };
   }
 
   return {
-    statutoryTotal: STATUTORY_VACATION_DAYS,
-    contractualTotal: CONTRACTUAL_VACATION_DAYS,
+    statutoryTotal: config.statutoryDays,
+    contractualTotal: config.contractualDays,
   };
 }
 
@@ -166,13 +172,14 @@ export function calculateYearlyStats(
   records: VacationRecord[],
   year: number,
   carryOverFromPreviousYear: number = 0,
-  employmentStartDate?: string
+  employmentStartDate?: string,
+  config: EntitlementConfig = DEFAULT_ENTITLEMENT
 ): YearlyVacationStats {
   // 筛选该年度的假期记录（确保类型一致）
   const yearRecords = records.filter(r => Number(r.year) === Number(year));
 
   // 结转假期截止日期（当年3月31日）
-  const carryOverDeadline = `${year}-03-31`;
+  const carryOverDeadline = `${year}-${config.carryOverDeadline}`;
 
   // 区分3月31日前后的法定假期使用量（结转天数优先抵扣截止日前的假期）
   let statutoryUsedBeforeDeadline = 0;
@@ -197,7 +204,7 @@ export function calculateYearlyStats(
   const statutoryUsed = statutoryUsedBeforeDeadline + statutoryUsedAfterDeadline;
 
   // 计算剩余
-  const entitlement = getYearlyEntitlement(year, employmentStartDate);
+  const entitlement = getYearlyEntitlement(year, employmentStartDate, config);
   const statutoryTotal = entitlement.statutoryTotal + carryOverFromPreviousYear;
   const contractualTotal = entitlement.contractualTotal;
 
@@ -226,9 +233,10 @@ export function isWithinCarryOverPeriod(originalYear: number, currentDate: Date)
 export function calculateCarryOver(
   records: VacationRecord[],
   fromYear: number,
-  employmentStartDate?: string
+  employmentStartDate?: string,
+  config: EntitlementConfig = DEFAULT_ENTITLEMENT
 ): number {
-  const stats = calculateYearlyStats(records, fromYear, 0, employmentStartDate);
+  const stats = calculateYearlyStats(records, fromYear, 0, employmentStartDate, config);
   // 只有法定假期可以结转
   return stats.statutoryRemaining;
 }
