@@ -1,9 +1,12 @@
+import type { RegionCode } from './regions';
+
 // 假期类型
 export type VacationType = 'statutory' | 'contractual';
 
 // 假期记录
 export interface VacationRecord {
   id: string;
+  userId: string;
   startDate: string; // ISO date string
   endDate: string;   // ISO date string
   workDays: number;  // 实际工作日数量（排除周末和公共假日）
@@ -46,3 +49,25 @@ export interface AppState {
   currentYear: number;
   startYear: number; // 入职年份
 }
+
+// 用户档案（对应 profiles 表）
+export interface Profile {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: 'user' | 'admin';
+  region: RegionCode;
+  employmentStartDate: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// 全局配置（对应 app_settings 表，单行）
+export interface AppSettings {
+  statutoryDays: number;
+  contractualDays: number;
+  carryOverDeadline: string; // 'MM-DD', e.g. '03-31'
+}
+
+// 新建假期记录的输入（id/createdAt 由数据库生成，userId 由调用方注入）
+export type NewVacationRecord = Omit<VacationRecord, 'id' | 'userId' | 'createdAt'>;
