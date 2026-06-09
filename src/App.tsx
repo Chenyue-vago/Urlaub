@@ -5,23 +5,14 @@ import {
   countWorkDaysByYear,
   calculateYearlyStats,
   calculateCarryOver,
-  formatDisplayDate,
   formatDateString,
-  formatShortDate,
-  getWorkDayDates,
+  formatDisplayDate,
 } from './utils';
 import { getPublicHolidays } from './holidays';
 import {
   Calendar,
   Plus,
-  Trash2,
-  Sun,
   Palmtree,
-  AlertCircle,
-  CheckCircle,
-  Info,
-  ChevronLeft,
-  ChevronRight,
   Globe,
   MapPin,
   Settings,
@@ -39,6 +30,10 @@ import { LoginPage } from './components/auth/LoginPage';
 import { WelcomeModal } from './components/dashboard/WelcomeModal';
 import { SettingsModal } from './components/dashboard/SettingsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
+import { YearNav } from './components/dashboard/YearNav';
+import { StatsCards } from './components/dashboard/StatsCards';
+import { RecordModal } from './components/dashboard/RecordModal';
+import { RecordList } from './components/dashboard/RecordList';
 
 function App() {
   const { locale, setLocale, t } = useTranslation();
@@ -63,10 +58,6 @@ function App() {
   const [showHolidays, setShowHolidays] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [view, setView] = useState<'dashboard' | 'admin'>('dashboard');
-
-  const [formStartDate, setFormStartDate] = useState('');
-  const [formEndDate, setFormEndDate] = useState('');
-  const [formDescription, setFormDescription] = useState('');
 
   useEffect(() => {
     localStorage.setItem('urlaub_selected_year', String(selectedYear));
@@ -105,7 +96,6 @@ function App() {
     employmentStartDate,
     entitlement
   );
-  const yearlyTotal = stats.statutoryTotal + stats.contractualTotal;
 
   const yearRecords = records
     .filter((r) => Number(r.year) === Number(selectedYear))
@@ -148,31 +138,25 @@ function App() {
     return { carryover: carryoverDays, contractual: contractualDays, statutory: statutoryDays };
   }
 
-  const previewByYear =
-    formStartDate && formEndDate && formStartDate <= formEndDate
-      ? countWorkDaysByYear(formStartDate, formEndDate, region)
-      : [];
-  const previewWorkDays = previewByYear.reduce((sum, p) => sum + p.days, 0);
-
   const handleAddRecord = async (
-    startDate: string,
-    endDate: string,
-    description: string
+    formStartDate: string,
+    formEndDate: string,
+    formDescription: string
   ) => {
     if (!profile) return;
-    if (!startDate || !endDate || startDate > endDate) {
+    if (!formStartDate || !formEndDate || formStartDate > formEndDate) {
       alert(t('alert.invalidDateRange'));
       return;
     }
 
-    const totalWorkDays = countWorkDays(startDate, endDate, region);
+    const totalWorkDays = countWorkDays(formStartDate, formEndDate, region);
     if (totalWorkDays === 0) {
       alert(t('alert.noWorkDays'));
       return;
     }
 
-    const splitByYear = countWorkDaysByYear(startDate, endDate, region);
-    const desc = description.trim();
+    const splitByYear = countWorkDaysByYear(formStartDate, formEndDate, region);
+    const desc = formDescription.trim();
 
     const newRecords: NewVacationRecord[] = [];
     const tempRecords = [...records];
@@ -228,7 +212,6 @@ function App() {
 
     try {
       await createMutation.mutateAsync(newRecords);
-      resetForm();
       setShowAddForm(false);
     } catch {
       showError(t('common.saveFailed'));
@@ -243,16 +226,7 @@ function App() {
     }
   };
 
-  const resetForm = () => {
-    setFormStartDate('');
-    setFormEndDate('');
-    setFormDescription('');
-  };
-
-  const totalUsed = stats.statutoryUsed + stats.contractualUsed;
-  const totalRemaining = stats.statutoryRemaining + stats.contractualRemaining;
   const today = formatDateString(new Date());
-  const dash = t('modal.dash');
 
   const handleYearChange = (delta: number) => {
     setSelectedYear((prev) => {
@@ -363,93 +337,12 @@ function App() {
         <AdminPanel />
       ) : (
         <main className="main" key={selectedYear}>
-          <div className="year-selector">
-            <button className="year-btn" onClick={() => handleYearChange(-1)}>
-              <ChevronLeft size={20} />
-            </button>
-            <span className="year-display">{selectedYear}</span>
-            <button className="year-btn" onClick={() => handleYearChange(1)}>
-              <ChevronRight size={20} />
-            </button>
-          </div>
+          <YearNav year={selectedYear} onChange={handleYearChange} />
 
           {recordsError && <div className="form-error">{t('common.loadFailed')}</div>}
           {recordsLoading && <div className="app-loading">{t('common.loading')}</div>}
 
-          <div className="stats-grid">
-            <div className="stat-card main-stat">
-              <div className="stat-header">
-                <Sun size={24} />
-                <span>{t('stats.yearlyOverview')}</span>
-              </div>
-              <div className="stat-progress">
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill statutory"
-                    style={{ width: `${yearlyTotal > 0 ? (stats.statutoryUsed / yearlyTotal) * 100 : 0}%` }}
-                  />
-                  <div
-                    className="progress-fill contractual"
-                    style={{
-                      width: `${yearlyTotal > 0 ? (stats.contractualUsed / yearlyTotal) * 100 : 0}%`,
-                      left: `${yearlyTotal > 0 ? (stats.statutoryUsed / yearlyTotal) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-                <div className="progress-labels">
-                  <span>{t('stats.usedDays', { n: totalUsed })}</span>
-                  <span>{t('stats.remainingDays', { n: totalRemaining })}</span>
-                </div>
-              </div>
-              <div className="stat-breakdown">
-                <div className="breakdown-item">
-                  <span className="dot statutory" />
-                  <span>{t('stats.statutory')}</span>
-                  <span className="breakdown-value">
-                    {t('stats.usedOf', { used: stats.statutoryUsed, total: stats.statutoryTotal })}
-                  </span>
-                </div>
-                <div className="breakdown-item">
-                  <span className="dot contractual" />
-                  <span>{t('stats.contractual')}</span>
-                  <span className="breakdown-value">
-                    {t('stats.usedOf', { used: stats.contractualUsed, total: stats.contractualTotal })}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon statutory-bg">
-                <CheckCircle size={20} />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">{t('stats.statutoryRemaining')}</span>
-                <span className="stat-value">{t('stats.daysShort', { n: stats.statutoryRemaining })}</span>
-                <span className="stat-sublabel">
-                  {t('stats.totalDays', { n: stats.statutoryTotal })}
-                  {carryOverFromPreviousYear > 0 && t('stats.includesCarryOver', { n: carryOverFromPreviousYear })}
-                  {stats.carryOverExpired > 0 && t('stats.expiredCarryOver', { n: stats.carryOverExpired })}
-                </span>
-              </div>
-              <div className="stat-note">
-                <span>{t('stats.carryoverHint')}</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon contractual-bg">
-                <AlertCircle size={20} />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">{t('stats.contractualRemaining')}</span>
-                <span className="stat-value">{t('stats.daysShort', { n: stats.contractualRemaining })}</span>
-              </div>
-              <div className="stat-note warning">
-                <span>{t('stats.contractualExpiryHint')}</span>
-              </div>
-            </div>
-          </div>
+          <StatsCards stats={stats} carryOverFromPreviousYear={carryOverFromPreviousYear} />
 
           <div className="actions">
             <button className="btn btn-primary" onClick={() => setShowAddForm(true)}>
@@ -466,71 +359,14 @@ function App() {
           </div>
 
           {showAddForm && (
-            <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
-              <div className="modal" onClick={(e) => e.stopPropagation()}>
-                <h2>{t('modal.addTitle')}</h2>
-                <div className="form-group">
-                  <label>{t('modal.startDate')}</label>
-                  <input
-                    type="date"
-                    value={formStartDate}
-                    onChange={(e) => setFormStartDate(e.target.value)}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>{t('modal.endDate')}</label>
-                  <input
-                    type="date"
-                    value={formEndDate}
-                    onChange={(e) => setFormEndDate(e.target.value)}
-                  />
-                </div>
-                {(formStartDate || formEndDate) && (
-                  <div className="date-summary">
-                    {t('modal.dateSelected', {
-                      start: formStartDate ? formatDisplayDate(formStartDate) : dash,
-                      end: formEndDate ? formatDisplayDate(formEndDate) : dash,
-                    })}
-                  </div>
-                )}
-                {previewWorkDays > 0 && (
-                  <div className="preview-days">
-                    <div className="preview-header">
-                      <span>{t('modal.consumeDays')}</span>
-                      <strong>{t('modal.daysValue', { n: previewWorkDays })}</strong>
-                    </div>
-                  </div>
-                )}
-                {carryOverFromPreviousYear > 0 &&
-                  formEndDate &&
-                  formEndDate <= `${selectedYear}-${entitlement.carryOverDeadline}` && (
-                  <div className="carryover-hint">
-                    <Info size={14} />
-                    <span>{t('modal.carryoverHint')}</span>
-                  </div>
-                )}
-                <div className="form-group">
-                  <label>{t('modal.descLabel')}</label>
-                  <input
-                    type="text"
-                    value={formDescription}
-                    onChange={(e) => setFormDescription(e.target.value)}
-                    placeholder={t('modal.descPlaceholder')}
-                  />
-                </div>
-                <div className="modal-actions">
-                  <button className="btn btn-ghost" onClick={() => setShowAddForm(false)}>
-                    {t('modal.cancel')}
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleAddRecord(formStartDate, formEndDate, formDescription)}
-                  >
-                    {t('modal.save')}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <RecordModal
+              region={region}
+              selectedYear={selectedYear}
+              carryOverFromPreviousYear={carryOverFromPreviousYear}
+              carryOverDeadline={entitlement.carryOverDeadline}
+              onSubmit={(start, end, desc) => handleAddRecord(start, end, desc)}
+              onClose={() => setShowAddForm(false)}
+            />
           )}
 
           {showHolidays && (
@@ -552,104 +388,13 @@ function App() {
             </div>
           )}
 
-          <div className="section">
-            <h2>{t('records.title', { year: selectedYear })}</h2>
-            <div className="year-summary">
-              {t('records.summary', {
-                statutory: stats.statutoryUsed,
-                contractual: stats.contractualUsed,
-                total: stats.statutoryUsed + stats.contractualUsed,
-              })}
-            </div>
-            {yearRecords.length === 0 ? (
-              <div className="empty-state">
-                <Palmtree size={48} />
-                <p>{t('records.empty')}</p>
-                <p className="empty-hint">{t('records.emptyHint')}</p>
-              </div>
-            ) : (
-              <div className="records-list">
-                {(() => {
-                  const dateMap = new Map<string, string[]>();
-                  const groups = new Map<string, VacationRecord[]>();
-                  for (const r of yearRecords) {
-                    const key = `${r.startDate}__${r.endDate}__${r.description}`;
-                    const arr = groups.get(key);
-                    if (arr) arr.push(r);
-                    else groups.set(key, [r]);
-                  }
-                  for (const group of groups.values()) {
-                    const sample = group[0];
-                    const allDates = getWorkDayDates(sample.startDate, sample.endDate, region);
-                    const priority = (r: VacationRecord) =>
-                      r.isCarryOver ? 0 : r.type === 'contractual' ? 1 : 2;
-                    const sorted = [...group].sort((a, b) => priority(a) - priority(b));
-                    let cursor = 0;
-                    for (const r of sorted) {
-                      dateMap.set(r.id, allDates.slice(cursor, cursor + r.workDays));
-                      cursor += r.workDays;
-                    }
-                  }
-                  return yearRecords.map((record) => {
-                    const kind: 'carryover' | 'contractual' | 'statutory' =
-                      record.isCarryOver ? 'carryover' : record.type;
-                    const kindLabelKey =
-                      kind === 'carryover'
-                        ? 'records.carryover'
-                        : kind === 'contractual'
-                          ? 'records.contractual'
-                          : 'records.statutory';
-                    const consumeKey =
-                      kind === 'carryover'
-                        ? 'records.consumeCarryover'
-                        : kind === 'contractual'
-                          ? 'records.consumeContractual'
-                          : 'records.consumeStatutory';
-                    const workDayDates = dateMap.get(record.id) ?? [];
-                    const workDayLabel = workDayDates.map(formatShortDate).join(', ');
-                    return (
-                      <div key={record.id} className="record-card">
-                        <div className="record-row-main">
-                          <div className="record-dates">
-                            <span className="record-range">
-                              {formatDisplayDate(record.startDate)}
-                              {record.startDate !== record.endDate && (
-                                <> — {formatDisplayDate(record.endDate)}</>
-                              )}
-                            </span>
-                            <div className="record-tags">
-                              <span className={`record-type ${kind}`}>{t(kindLabelKey)}</span>
-                              <span className="record-year">
-                                {t('records.belongsToYear', { year: record.year })}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="record-info">
-                            <span className="record-days">{t(consumeKey, { n: record.workDays })}</span>
-                            {record.description && (
-                              <span className="record-desc">{record.description}</span>
-                            )}
-                          </div>
-                          <button
-                            className="record-delete"
-                            onClick={() => handleDeleteRecord(record.id)}
-                            title={t('records.deleteTitle')}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                        {workDayDates.length > 0 && (
-                          <div className="record-workdays">
-                            {t('records.workdayDates', { dates: workDayLabel })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
-          </div>
+          <RecordList
+            records={yearRecords}
+            region={region}
+            stats={stats}
+            selectedYear={selectedYear}
+            onDelete={handleDeleteRecord}
+          />
 
           <div className="section rules">
             <h2>{t('rules.title')}</h2>
