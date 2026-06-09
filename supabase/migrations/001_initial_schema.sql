@@ -84,7 +84,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Non-admins may not change role or is_active (their own included).
+-- Non-admins may not change role, is_active, or id.
 create or replace function public.enforce_profile_update_rules()
 returns trigger
 language plpgsql
@@ -92,6 +92,10 @@ security definer
 set search_path = public
 as $$
 begin
+  -- id is always immutable
+  if new.id is distinct from old.id then
+    raise exception 'id is immutable';
+  end if;
   if not public.is_admin() then
     if new.role is distinct from old.role
        or new.is_active is distinct from old.is_active then
@@ -118,7 +122,8 @@ create policy profiles_select on public.profiles
 
 create policy profiles_update on public.profiles
   for update to authenticated
-  using (id = auth.uid() or public.is_admin());
+  using  (id = auth.uid() or public.is_admin())
+  with check (id = auth.uid() or public.is_admin());
 
 create policy vacation_select on public.vacation_records
   for select to authenticated
@@ -130,7 +135,8 @@ create policy vacation_insert on public.vacation_records
 
 create policy vacation_update on public.vacation_records
   for update to authenticated
-  using (user_id = auth.uid() or public.is_admin());
+  using  (user_id = auth.uid() or public.is_admin())
+  with check (user_id = auth.uid() or public.is_admin());
 
 create policy vacation_delete on public.vacation_records
   for delete to authenticated
@@ -142,4 +148,5 @@ create policy settings_select on public.app_settings
 
 create policy settings_update on public.app_settings
   for update to authenticated
-  using (public.is_admin());
+  using  (public.is_admin())
+  with check (public.is_admin());
