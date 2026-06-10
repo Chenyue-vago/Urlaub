@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
-import { NewVacationRecord, VacationRecord } from '../../types';
-import { buildBackup, parseBackup } from '../../services/backup';
+import { VacationRecord } from '../../types';
+import { buildBackup, parseBackup, ParsedBackup } from '../../services/backup';
 import { formatDateString } from '../../utils';
 import { useToast } from '../Toast';
 
@@ -13,7 +13,7 @@ function isValidIsoDate(s: string): boolean {
 interface SettingsModalProps {
   initialDate: string;
   records: VacationRecord[];
-  onImport: (records: NewVacationRecord[]) => Promise<void>;
+  onImport: (parsed: ParsedBackup) => Promise<void>;
   onSave: (employmentStartDate: string) => void;
   onClose: () => void;
 }
@@ -61,7 +61,7 @@ export function SettingsModal({
       resetInput();
     };
     reader.onload = async () => {
-      let parsed: NewVacationRecord[];
+      let parsed: ParsedBackup;
       try {
         parsed = parseBackup(JSON.parse(String(reader.result)));
       } catch {
@@ -69,14 +69,14 @@ export function SettingsModal({
         resetInput();
         return;
       }
-      if (!window.confirm(t('settings.importConfirm', { n: parsed.length }))) {
+      if (!window.confirm(t('settings.importConfirm', { n: parsed.records.length }))) {
         resetInput();
         return;
       }
       setImporting(true);
       try {
         await onImport(parsed);
-        showSuccess(t('settings.importSuccess', { n: parsed.length }));
+        showSuccess(t('settings.importSuccess', { n: parsed.records.length }));
       } catch {
         showError(t('common.saveFailed'));
       } finally {

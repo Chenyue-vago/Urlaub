@@ -23,6 +23,7 @@ import { LOCALES, Locale, useTranslation } from './i18n';
 import { DEFAULT_REGION, REGIONS, RegionCode, getRegion } from './regions';
 import { useAuth } from './contexts/AuthContext';
 import { useToast } from './components/Toast';
+import { ParsedBackup } from './services/backup';
 import { useVacations, useCreateVacations, useDeleteVacation } from './hooks/useVacations';
 import { useEntitlementConfig } from './hooks/useSettings';
 import { updateProfile } from './services/profile';
@@ -57,7 +58,7 @@ function getUserInitials(profile: Profile): string {
 function App() {
   const { locale, setLocale, t } = useTranslation();
   const { profile, isAdmin, signOut, refreshProfile, loading: authLoading } = useAuth();
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
 
   const { data: records = [], isLoading: recordsLoading, isError: recordsError } =
     useVacations(profile?.id ?? '');
@@ -374,8 +375,25 @@ function App() {
         <SettingsModal
           initialDate={employmentStartDate}
           records={records}
-          onImport={async (imported) => {
-            await createMutation.mutateAsync(imported);
+          onImport={async (parsed: ParsedBackup) => {
+            await createMutation.mutateAsync(parsed.records);
+            if (parsed.employmentStartDate) {
+              if (!employmentStartDate) {
+                // Profile has no start date yet — apply automatically
+                await updateProfile(profile.id, {
+                  employmentStartDate: parsed.employmentStartDate,
+                });
+                await refreshProfile();
+                showSuccess(
+                  t('settings.importStartApplied', { date: parsed.employmentStartDate })
+                );
+              } else if (parsed.employmentStartDate !== employmentStartDate) {
+                // Different start date — warn, don't overwrite
+                showError(
+                  t('settings.importStartConflict', { date: parsed.employmentStartDate })
+                );
+              }
+            }
           }}
           onSave={handleEmploymentDateSave}
           onClose={() => setShowSettings(false)}

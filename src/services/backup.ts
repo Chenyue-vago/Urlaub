@@ -8,6 +8,12 @@ export interface BackupFile {
   records: NewVacationRecord[];
 }
 
+export interface ParsedBackup {
+  records: NewVacationRecord[];
+  // v1 备份中提取的入职日期（可能不存在）
+  employmentStartDate?: string;
+}
+
 export function buildBackup(records: VacationRecord[]): BackupFile {
   return {
     schemaVersion: 2,
@@ -75,12 +81,12 @@ function validateRecord(raw: unknown): NewVacationRecord {
   };
 }
 
-function parseLegacyV1(data: Record<string, unknown>): NewVacationRecord[] {
+function parseLegacyV1(data: Record<string, unknown>): ParsedBackup {
   const rawJson = data['urlaub_manager_data'];
   if (typeof rawJson !== 'string') throw new Error('legacy backup has no records');
   const parsed = JSON.parse(rawJson);
   if (!Array.isArray(parsed)) throw new Error('legacy backup records not an array');
-  return parsed.map((raw) => {
+  const records = parsed.map((raw) => {
     const r = raw as Record<string, unknown>;
     const { description, carryOverHinted } = cleanLegacyDescription(String(r.description ?? ''));
     const record = validateRecord({ ...r, description });
@@ -89,22 +95,30 @@ function parseLegacyV1(data: Record<string, unknown>): NewVacationRecord[] {
     }
     return record;
   });
+
+  const rawStart = data['urlaub_employment_start'];
+  const employmentStartDate =
+    typeof rawStart === 'string' && ISO_DATE.test(rawStart) ? rawStart : undefined;
+
+  return { records, employmentStartDate };
 }
 
 // 解析备份文件（v1 或 v2），任何非预期结构都抛错，由调用方提示用户。
-export function parseBackup(parsed: unknown): NewVacationRecord[] {
+export function parseBackup(parsed: unknown): ParsedBackup {
   if (!parsed || typeof parsed !== 'object') throw new Error('invalid backup file');
   const root = parsed as Record<string, unknown>;
 
-  let records: NewVacationRecord[];
   if (Array.isArray(root.records)) {
-    records = root.records.map(validateRecord);
-  } else if (root.data && typeof root.data === 'object') {
-    records = parseLegacyV1(root.data as Record<string, unknown>);
-  } else {
-    throw new Error('unrecognised backup format');
+    const records = root.records.map(validateRecord);
+    if (records.length === 0) throw new Error('backup contains no records');
+    return { records };
   }
 
-  if (records.length === 0) throw new Error('backup contains no records');
-  return records;
+  if (root.data && typeof root.data === 'object') {
+    const result = parseLegacyV1(root.data as Record<string, unknown>);
+    if (result.records.length === 0) throw new Error('backup contains no records');
+    return result;
+  }
+
+  throw new Error('unrecognised backup format');
 }

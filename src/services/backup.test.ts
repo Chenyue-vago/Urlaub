@@ -36,7 +36,9 @@ describe('buildBackup', () => {
 describe('parseBackup', () => {
   it('round-trips a v2 backup', () => {
     const backup = buildBackup([record]);
-    expect(parseBackup(JSON.parse(JSON.stringify(backup)))).toEqual(backup.records);
+    const result = parseBackup(JSON.parse(JSON.stringify(backup)));
+    expect(result.records).toEqual(backup.records);
+    expect(result.employmentStartDate).toBeUndefined();
   });
 
   it('reads the legacy v1 localStorage backup format', () => {
@@ -59,7 +61,8 @@ describe('parseBackup', () => {
         urlaub_region: 'BW',
       },
     };
-    expect(parseBackup(legacy)).toEqual([
+    const result = parseBackup(legacy);
+    expect(result.records).toEqual([
       {
         startDate: '2025-06-02',
         endDate: '2025-06-06',
@@ -70,6 +73,54 @@ describe('parseBackup', () => {
         year: 2025,
       },
     ]);
+    expect(result.employmentStartDate).toBeUndefined();
+  });
+
+  it('extracts employment start date from v1 backup', () => {
+    const legacy = {
+      schemaVersion: 1,
+      exportedAt: '2025-12-01T00:00:00Z',
+      data: {
+        urlaub_manager_data: JSON.stringify([
+          {
+            id: 'old-1',
+            startDate: '2025-06-02',
+            endDate: '2025-06-06',
+            workDays: 5,
+            description: '',
+            type: 'contractual',
+            year: 2025,
+            createdAt: '2025-06-01T00:00:00Z',
+          },
+        ]),
+        urlaub_employment_start: '2025-08-01',
+      },
+    };
+    const result = parseBackup(legacy);
+    expect(result.employmentStartDate).toBe('2025-08-01');
+  });
+
+  it('ignores invalid employment start date from v1 backup', () => {
+    const legacy = {
+      schemaVersion: 1,
+      exportedAt: '2025-12-01T00:00:00Z',
+      data: {
+        urlaub_manager_data: JSON.stringify([
+          {
+            id: 'x',
+            startDate: '2025-06-02',
+            endDate: '2025-06-06',
+            workDays: 5,
+            description: '',
+            type: 'contractual',
+            year: 2025,
+            createdAt: '2025-06-01T00:00:00Z',
+          },
+        ]),
+        urlaub_employment_start: 'not-a-date',
+      },
+    };
+    expect(parseBackup(legacy).employmentStartDate).toBeUndefined();
   });
 
   it('infers carry-over from the legacy description hint', () => {
@@ -91,7 +142,7 @@ describe('parseBackup', () => {
         ]),
       },
     };
-    expect(parseBackup(legacy)).toEqual([
+    expect(parseBackup(legacy).records).toEqual([
       {
         startDate: '2025-02-03',
         endDate: '2025-02-03',
