@@ -28,6 +28,13 @@ const zh: Dict = {
   'settings.employmentStartHint': '用于按入职月份比例计算入职当年的假期额度。设置之后可以随时修改。',
   'settings.save': '保存',
   'settings.cancel': '取消',
+  'settings.backupTitle': '💾 备份与恢复',
+  'settings.backupHint': '导出会把你的所有请假记录保存为 JSON 文件。导入会把文件中的记录追加到现有数据上（不会覆盖），也兼容旧版（localStorage 时代）的备份文件。',
+  'settings.export': '📤 导出备份',
+  'settings.import': '📥 导入备份',
+  'settings.importConfirm': '将把备份文件中的 {n} 条记录添加到你现有的数据上（不会删除任何现有记录）。继续吗？',
+  'settings.importSuccess': '导入成功，添加了 {n} 条记录。',
+  'settings.importError': '无法读取备份文件，请确认它是本应用导出的 JSON 文件。',
 
   // auth
   'auth.title': '登录 Urlaub',
@@ -177,6 +184,13 @@ const en: Dict = {
   'settings.employmentStartHint': 'Used to pro-rate your vacation entitlement for the year you joined. You can change this anytime.',
   'settings.save': 'Save',
   'settings.cancel': 'Cancel',
+  'settings.backupTitle': '💾 Backup & restore',
+  'settings.backupHint': 'Export saves all your vacation records as a JSON file. Import adds the records from a file on top of your existing data (nothing is overwritten). Old backups from the localStorage version also work.',
+  'settings.export': '📤 Export backup',
+  'settings.import': '📥 Import backup',
+  'settings.importConfirm': 'This will add the {n} record(s) from the backup file to your existing data (no existing records are removed). Continue?',
+  'settings.importSuccess': 'Import successful, {n} record(s) added.',
+  'settings.importError': 'Could not read the backup file. Please make sure it is a JSON file exported from this app.',
 
   // auth
   'auth.title': 'Sign in to Urlaub',

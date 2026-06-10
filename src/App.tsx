@@ -373,6 +373,10 @@ function App() {
       {showSettings && (
         <SettingsModal
           initialDate={employmentStartDate}
+          records={records}
+          onImport={async (imported) => {
+            await createMutation.mutateAsync(imported);
+          }}
           onSave={handleEmploymentDateSave}
           onClose={() => setShowSettings(false)}
         />
