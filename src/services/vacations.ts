@@ -75,3 +75,11 @@ export async function deleteVacation(id: string): Promise<void> {
   const { error } = await supabase.from('vacation_records').delete().eq('id', id);
   if (error) throw error;
 }
+
+export async function deleteAllVacations(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('vacation_records')
+    .delete()
+    .eq('user_id', userId);
+  if (error) throw error;
+}

@@ -5,6 +5,8 @@ import { buildBackup, parseBackup, ParsedBackup } from '../../services/backup';
 import { formatDateString } from '../../utils';
 import { useToast } from '../Toast';
 
+type ImportMode = 'merge' | 'replace';
+
 function isValidIsoDate(s: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   return !Number.isNaN(new Date(s).getTime());
@@ -13,7 +15,7 @@ function isValidIsoDate(s: string): boolean {
 interface SettingsModalProps {
   initialDate: string;
   records: VacationRecord[];
-  onImport: (parsed: ParsedBackup) => Promise<void>;
+  onImport: (parsed: ParsedBackup, mode: ImportMode) => Promise<void>;
   onSave: (employmentStartDate: string) => void;
   onClose: () => void;
 }
@@ -29,7 +31,8 @@ export function SettingsModal({
   const { showError, showSuccess } = useToast();
   const [draftDate, setDraftDate] = useState(initialDate);
   const [importing, setImporting] = useState(false);
-  // 用于触发隐藏的 file input 走系统文件选择
+  // tracks which button triggered the file picker
+  const importModeRef = useRef<ImportMode>('merge');
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const handleExportBackup = () => {
@@ -47,14 +50,18 @@ export function SettingsModal({
     URL.revokeObjectURL(url);
   };
 
+  const triggerImport = (mode: ImportMode) => {
+    importModeRef.current = mode;
+    importInputRef.current?.click();
+  };
+
   const handleImportFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
     const file = input.files?.[0];
     if (!file) return;
+    const mode = importModeRef.current;
     // 一定要清空，否则下次选同名文件 onChange 不会再触发
-    const resetInput = () => {
-      input.value = '';
-    };
+    const resetInput = () => { input.value = ''; };
     const reader = new FileReader();
     reader.onerror = () => {
       showError(t('settings.importError'));
@@ -69,14 +76,25 @@ export function SettingsModal({
         resetInput();
         return;
       }
-      if (!window.confirm(t('settings.importConfirm', { n: parsed.records.length }))) {
+      const confirmMsg =
+        mode === 'replace'
+          ? t('settings.importConfirmReplace', {
+              existing: records.length,
+              n: parsed.records.length,
+            })
+          : t('settings.importConfirm', { n: parsed.records.length });
+      if (!window.confirm(confirmMsg)) {
         resetInput();
         return;
       }
       setImporting(true);
       try {
-        await onImport(parsed);
-        showSuccess(t('settings.importSuccess', { n: parsed.records.length }));
+        await onImport(parsed, mode);
+        const successMsg =
+          mode === 'replace'
+            ? t('settings.importReplaceSuccess', { n: parsed.records.length })
+            : t('settings.importSuccess', { n: parsed.records.length });
+        showSuccess(successMsg);
       } catch {
         showError(t('common.saveFailed'));
       } finally {
@@ -116,10 +134,18 @@ export function SettingsModal({
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => importInputRef.current?.click()}
+              onClick={() => triggerImport('merge')}
               disabled={importing}
             >
-              {t('settings.import')}
+              {t('settings.importMerge')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => triggerImport('replace')}
+              disabled={importing}
+            >
+              {t('settings.importReplace')}
             </button>
             <input
               ref={importInputRef}

@@ -24,7 +24,7 @@ import { DEFAULT_REGION, REGIONS, RegionCode, getRegion } from './regions';
 import { useAuth } from './contexts/AuthContext';
 import { useToast } from './components/Toast';
 import { ParsedBackup } from './services/backup';
-import { useVacations, useCreateVacations, useDeleteVacation } from './hooks/useVacations';
+import { useVacations, useCreateVacations, useDeleteVacation, useDeleteAllVacations } from './hooks/useVacations';
 import { useEntitlementConfig } from './hooks/useSettings';
 import { updateProfile } from './services/profile';
 import { LoginPage } from './components/auth/LoginPage';
@@ -65,6 +65,7 @@ function App() {
   const entitlement = useEntitlementConfig(!!profile);
   const createMutation = useCreateVacations(profile?.id ?? '');
   const deleteMutation = useDeleteVacation(profile?.id ?? '');
+  const deleteAllMutation = useDeleteAllVacations(profile?.id ?? '');
 
   const region: RegionCode = profile?.region ?? DEFAULT_REGION;
   const employmentStartDate = profile?.employmentStartDate ?? '';
@@ -375,7 +376,10 @@ function App() {
         <SettingsModal
           initialDate={employmentStartDate}
           records={records}
-          onImport={async (parsed: ParsedBackup) => {
+          onImport={async (parsed: ParsedBackup, mode) => {
+            if (mode === 'replace') {
+              await deleteAllMutation.mutateAsync();
+            }
             await createMutation.mutateAsync(parsed.records);
             if (parsed.employmentStartDate) {
               await updateProfile(profile.id, {

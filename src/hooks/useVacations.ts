@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { NewVacationRecord, VacationRecord } from '../types';
 import {
   createVacations,
+  deleteAllVacations,
   deleteVacation,
   listVacations,
 } from '../services/vacations';
@@ -25,6 +26,15 @@ export function useCreateVacations(userId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (records: NewVacationRecord[]) => createVacations(records, userId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: vacationsKey(userId) }),
+  });
+}
+
+export function useDeleteAllVacations(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteAllVacations(userId),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: vacationsKey(userId) }),
   });
