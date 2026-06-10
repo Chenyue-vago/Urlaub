@@ -31,8 +31,7 @@ export function SettingsModal({
   const { showError, showSuccess } = useToast();
   const [draftDate, setDraftDate] = useState(initialDate);
   const [importing, setImporting] = useState(false);
-  // tracks which button triggered the file picker
-  const importModeRef = useRef<ImportMode>('merge');
+  const [pendingImport, setPendingImport] = useState<ParsedBackup | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const handleExportBackup = () => {
@@ -50,59 +49,52 @@ export function SettingsModal({
     URL.revokeObjectURL(url);
   };
 
-  const triggerImport = (mode: ImportMode) => {
-    importModeRef.current = mode;
-    importInputRef.current?.click();
-  };
-
   const handleImportFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
     const file = input.files?.[0];
     if (!file) return;
-    const mode = importModeRef.current;
     // 一定要清空，否则下次选同名文件 onChange 不会再触发
-    const resetInput = () => { input.value = ''; };
+    input.value = '';
     const reader = new FileReader();
-    reader.onerror = () => {
-      showError(t('settings.importError'));
-      resetInput();
-    };
-    reader.onload = async () => {
-      let parsed: ParsedBackup;
+    reader.onerror = () => showError(t('settings.importError'));
+    reader.onload = () => {
       try {
-        parsed = parseBackup(JSON.parse(String(reader.result)));
+        const parsed = parseBackup(JSON.parse(String(reader.result)));
+        setPendingImport(parsed);
       } catch {
         showError(t('settings.importError'));
-        resetInput();
-        return;
-      }
-      const confirmMsg =
-        mode === 'replace'
-          ? t('settings.importConfirmReplace', {
-              existing: records.length,
-              n: parsed.records.length,
-            })
-          : t('settings.importConfirm', { n: parsed.records.length });
-      if (!window.confirm(confirmMsg)) {
-        resetInput();
-        return;
-      }
-      setImporting(true);
-      try {
-        await onImport(parsed, mode);
-        const successMsg =
-          mode === 'replace'
-            ? t('settings.importReplaceSuccess', { n: parsed.records.length })
-            : t('settings.importSuccess', { n: parsed.records.length });
-        showSuccess(successMsg);
-      } catch {
-        showError(t('common.saveFailed'));
-      } finally {
-        setImporting(false);
-        resetInput();
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleConfirmImport = async (mode: ImportMode) => {
+    if (!pendingImport) return;
+    if (
+      mode === 'replace' &&
+      !window.confirm(
+        t('settings.importConfirmReplace', {
+          existing: records.length,
+          n: pendingImport.records.length,
+        })
+      )
+    ) {
+      return;
+    }
+    setImporting(true);
+    try {
+      await onImport(pendingImport, mode);
+      const successMsg =
+        mode === 'replace'
+          ? t('settings.importReplaceSuccess', { n: pendingImport.records.length })
+          : t('settings.importSuccess', { n: pendingImport.records.length });
+      showSuccess(successMsg);
+      setPendingImport(null);
+    } catch {
+      showError(t('common.saveFailed'));
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -122,39 +114,65 @@ export function SettingsModal({
         <div className="settings-section">
           <h3 className="settings-section-title">{t('settings.backupTitle')}</h3>
           <p className="form-hint">{t('settings.backupHint')}</p>
-          <div className="settings-backup-actions">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleExportBackup}
-              disabled={records.length === 0}
-            >
-              {t('settings.export')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => triggerImport('merge')}
-              disabled={importing}
-            >
-              {t('settings.importMerge')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => triggerImport('replace')}
-              disabled={importing}
-            >
-              {t('settings.importReplace')}
-            </button>
-            <input
-              ref={importInputRef}
-              type="file"
-              accept="application/json,.json"
-              hidden
-              onChange={handleImportFileChosen}
-            />
-          </div>
+
+          {pendingImport ? (
+            <div className="import-choice">
+              <p className="import-choice-hint">
+                {t('settings.importChoiceHint', { n: pendingImport.records.length })}
+              </p>
+              <div className="settings-backup-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => handleConfirmImport('merge')}
+                  disabled={importing}
+                >
+                  {t('settings.importMerge')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => handleConfirmImport('replace')}
+                  disabled={importing}
+                >
+                  {t('settings.importReplace')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setPendingImport(null)}
+                  disabled={importing}
+                >
+                  {t('settings.cancel')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="settings-backup-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleExportBackup}
+                disabled={records.length === 0}
+              >
+                {t('settings.export')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => importInputRef.current?.click()}
+              >
+                {t('settings.import')}
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={handleImportFileChosen}
+              />
+            </div>
+          )}
         </div>
 
         <div className="modal-actions">

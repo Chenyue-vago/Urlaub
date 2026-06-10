@@ -701,6 +701,11 @@ body {
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
+.import-choice-hint {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin: 0.5rem 0 0;
+}
 
 .welcome-body {
   margin-bottom: 1.25rem;
