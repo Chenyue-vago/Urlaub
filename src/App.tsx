@@ -58,7 +58,7 @@ function getUserInitials(profile: Profile): string {
 function App() {
   const { locale, setLocale, t } = useTranslation();
   const { profile, isAdmin, signOut, refreshProfile, loading: authLoading } = useAuth();
-  const { showError, showSuccess } = useToast();
+  const { showError, showInfo } = useToast();
 
   const { data: records = [], isLoading: recordsLoading, isError: recordsError } =
     useVacations(profile?.id ?? '');
@@ -378,21 +378,13 @@ function App() {
           onImport={async (parsed: ParsedBackup) => {
             await createMutation.mutateAsync(parsed.records);
             if (parsed.employmentStartDate) {
-              if (!employmentStartDate) {
-                // Profile has no start date yet — apply automatically
-                await updateProfile(profile.id, {
-                  employmentStartDate: parsed.employmentStartDate,
-                });
-                await refreshProfile();
-                showSuccess(
-                  t('settings.importStartApplied', { date: parsed.employmentStartDate })
-                );
-              } else if (parsed.employmentStartDate !== employmentStartDate) {
-                // Different start date — warn, don't overwrite
-                showError(
-                  t('settings.importStartConflict', { date: parsed.employmentStartDate })
-                );
-              }
+              await updateProfile(profile.id, {
+                employmentStartDate: parsed.employmentStartDate,
+              });
+              await refreshProfile();
+              showInfo(
+                t('settings.importStartApplied', { date: parsed.employmentStartDate })
+              );
             }
           }}
           onSave={handleEmploymentDateSave}

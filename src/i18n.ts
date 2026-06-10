@@ -35,8 +35,7 @@ const zh: Dict = {
   'settings.importConfirm': '将把备份文件中的 {n} 条记录添加到你现有的数据上（不会删除任何现有记录）。继续吗？',
   'settings.importSuccess': '导入成功，添加了 {n} 条记录。',
   'settings.importError': '无法读取备份文件，请确认它是本应用导出的 JSON 文件。',
-  'settings.importStartApplied': '已自动应用备份中的入职日期（{date}）。',
-  'settings.importStartConflict': '备份中的入职日期为 {date}，与当前设置不同——请在设置中确认。',
+  'settings.importStartApplied': '已从备份中应用入职日期（{date}）。',
 
   // auth
   'auth.title': '登录 Urlaub',
@@ -194,7 +193,6 @@ const en: Dict = {
   'settings.importSuccess': 'Import successful, {n} record(s) added.',
   'settings.importError': 'Could not read the backup file. Please make sure it is a JSON file exported from this app.',
   'settings.importStartApplied': 'Employment start date from backup applied ({date}).',
-  'settings.importStartConflict': 'Backup has employment start {date} — different from your current setting. Check Settings if totals look wrong.',
 
   // auth
   'auth.title': 'Sign in to Urlaub',

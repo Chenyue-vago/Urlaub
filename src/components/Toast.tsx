@@ -10,12 +10,13 @@ import {
 interface ToastMessage {
   id: number;
   text: string;
-  kind: 'error' | 'success';
+  kind: 'error' | 'success' | 'info';
 }
 
 interface ToastContextValue {
   showError: (text: string) => void;
   showSuccess: (text: string) => void;
+  showInfo: (text: string) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -34,9 +35,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showError = useCallback((text: string) => push(text, 'error'), [push]);
   const showSuccess = useCallback((text: string) => push(text, 'success'), [push]);
+  const showInfo = useCallback((text: string) => push(text, 'info'), [push]);
 
   return (
-    <ToastContext.Provider value={{ showError, showSuccess }}>
+    <ToastContext.Provider value={{ showError, showSuccess, showInfo }}>
       {children}
       {toasts.length > 0 && (
         <div className="toast-container" role="status" aria-live="polite">

@@ -1117,6 +1117,7 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 .toast-error { background: #dc2626; }
+.toast-info { background: #4b5563; }
 
 /* Auth page */
 .auth-page {
