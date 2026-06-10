@@ -1,4 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// vacations.ts imports the live Supabase client (lib/supabase), which calls
+// createClient() at module load. On Node < 22 that throws ("no native
+// WebSocket"). These tests only cover the pure row mappers, so stub the
+// client module to avoid constructing a real one.
+vi.mock('../lib/supabase', () => ({ supabase: {} }));
+
 import { rowToRecord, recordToRow, VacationRow } from './vacations';
 import { NewVacationRecord } from '../types';
 
