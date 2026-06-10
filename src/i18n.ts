@@ -53,12 +53,20 @@ const zh: Dict = {
   // navigation
   'nav.dashboard': '面板',
   'nav.admin': '管理',
+  'nav.main': '主导航',
   // common
   'common.loading': '加载中…',
   'common.saveFailed': '保存失败，请重试。',
   'common.loadFailed': '数据加载失败，请刷新页面。',
   // admin
   'admin.title': '管理后台',
+  'admin.subtitle': '管理用户账号与全局假期配额设置。',
+  'admin.statUsers': '注册用户',
+  'admin.statActive': '活跃账号',
+  'admin.you': '你',
+  'admin.settingsLead': '这些设置适用于所有用户。在下方输入框中修改数值后点击保存。',
+  'admin.daysUnit': '天',
+  'admin.deadlineHint': '格式：MM-DD，例如 03-31',
   'admin.usersTitle': '用户',
   'admin.colEmail': '邮箱',
   'admin.colName': '昵称',
@@ -194,12 +202,20 @@ const en: Dict = {
   // navigation
   'nav.dashboard': 'Dashboard',
   'nav.admin': 'Admin',
+  'nav.main': 'Main navigation',
   // common
   'common.loading': 'Loading…',
   'common.saveFailed': 'Saving failed. Please try again.',
   'common.loadFailed': 'Loading data failed. Please reload the page.',
   // admin
   'admin.title': 'Administration',
+  'admin.subtitle': 'Manage user accounts and global vacation entitlement settings.',
+  'admin.statUsers': 'Registered users',
+  'admin.statActive': 'Active accounts',
+  'admin.you': 'You',
+  'admin.settingsLead': 'These settings apply to all users. Edit the fields below, then save.',
+  'admin.daysUnit': 'days',
+  'admin.deadlineHint': 'Format: MM-DD, e.g. 03-31',
   'admin.usersTitle': 'Users',
   'admin.colEmail': 'Email',
   'admin.colName': 'Name',

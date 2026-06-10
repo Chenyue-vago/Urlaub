@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SlidersHorizontal, CalendarClock, Save } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { useSettings, useUpdateSettings } from '../../hooks/useSettings';
 import { useToast } from '../Toast';
@@ -47,44 +48,88 @@ export function SettingsCard() {
   };
 
   return (
-    <div className="section">
-      <h2>{t('admin.settingsTitle')}</h2>
-      <div className="admin-settings-grid">
-        <div className="form-group">
-          <label>{t('admin.statutoryDays')}</label>
-          <input
-            type="number"
-            min={0}
-            value={statutory}
-            onChange={(e) => setStatutory(e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label>{t('admin.contractualDays')}</label>
-          <input
-            type="number"
-            min={0}
-            value={contractual}
-            onChange={(e) => setContractual(e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label>{t('admin.carryOverDeadline')}</label>
-          <input
-            type="text"
-            placeholder="03-31"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-          />
+    <section className="admin-section admin-section--settings">
+      <div className="admin-section-head">
+        <div className="admin-section-title">
+          <span className="admin-section-icon admin-section-icon--settings">
+            <SlidersHorizontal size={18} aria-hidden="true" />
+          </span>
+          <h2>{t('admin.settingsTitle')}</h2>
         </div>
       </div>
-      <button
-        className="btn btn-primary"
-        onClick={handleSave}
-        disabled={updateMutation.isPending}
-      >
-        {t('admin.save')}
-      </button>
-    </div>
+
+      <p className="admin-settings-lead">{t('admin.settingsLead')}</p>
+
+      <div className="admin-settings-fields">
+        <div className="admin-setting-field">
+          <label className="admin-setting-label" htmlFor="admin-statutory">
+            <span className="admin-setting-dot admin-setting-dot--statutory" aria-hidden="true" />
+            {t('admin.statutoryDays')}
+          </label>
+          <div className="admin-setting-input-box admin-setting-input-box--statutory">
+            <input
+              id="admin-statutory"
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={statutory}
+              onChange={(e) => setStatutory(e.target.value)}
+            />
+            <span className="admin-setting-suffix">{t('admin.daysUnit')}</span>
+          </div>
+        </div>
+
+        <div className="admin-setting-field">
+          <label className="admin-setting-label" htmlFor="admin-contractual">
+            <span className="admin-setting-dot admin-setting-dot--contractual" aria-hidden="true" />
+            {t('admin.contractualDays')}
+          </label>
+          <div className="admin-setting-input-box admin-setting-input-box--contractual">
+            <input
+              id="admin-contractual"
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={contractual}
+              onChange={(e) => setContractual(e.target.value)}
+            />
+            <span className="admin-setting-suffix">{t('admin.daysUnit')}</span>
+          </div>
+        </div>
+
+        <div className="admin-setting-field">
+          <label className="admin-setting-label" htmlFor="admin-deadline">
+            <CalendarClock size={14} aria-hidden="true" />
+            {t('admin.carryOverDeadline')}
+          </label>
+          <div className="admin-setting-input-box admin-setting-input-box--deadline">
+            <input
+              id="admin-deadline"
+              type="text"
+              inputMode="numeric"
+              placeholder="03-31"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              aria-describedby="admin-deadline-hint"
+            />
+          </div>
+          <p className="admin-setting-hint" id="admin-deadline-hint">
+            {t('admin.deadlineHint')}
+          </p>
+        </div>
+      </div>
+
+      <div className="admin-settings-footer">
+        <button
+          type="button"
+          className="btn btn-primary admin-save-btn"
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+        >
+          <Save size={16} aria-hidden="true" />
+          {t('admin.save')}
+        </button>
+      </div>
+    </section>
   );
 }

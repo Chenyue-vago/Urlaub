@@ -290,6 +290,25 @@ function App() {
                   <span className="header-user-badge">{t('nav.admin')}</span>
                 )}
               </div>
+              {isAdmin && (
+                <nav className="header-nav" aria-label={t('nav.main')}>
+                  <button
+                    type="button"
+                    className={view === 'dashboard' ? 'active' : ''}
+                    onClick={() => setView('dashboard')}
+                  >
+                    {t('nav.dashboard')}
+                  </button>
+                  <button
+                    type="button"
+                    className={view === 'admin' ? 'active' : ''}
+                    onClick={() => setView('admin')}
+                  >
+                    <Shield size={14} aria-hidden="true" />
+                    {t('nav.admin')}
+                  </button>
+                </nav>
+              )}
               <label className="header-select">
                 <Globe size={16} />
                 <span className="sr-only">{t('header.language')}</span>
@@ -327,17 +346,6 @@ function App() {
               >
                 <Settings size={16} />
               </button>
-              {isAdmin && (
-                <button
-                  type="button"
-                  className="header-icon-btn"
-                  onClick={() => setView(view === 'admin' ? 'dashboard' : 'admin')}
-                  aria-label={t('nav.admin')}
-                  title={t('nav.admin')}
-                >
-                  <Shield size={16} />
-                </button>
-              )}
               <button
                 type="button"
                 className="header-icon-btn"
