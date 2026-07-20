@@ -9,7 +9,7 @@ It calculates your German statutory + contractual vacation entitlement, knows th
 ## Setup
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+ (CI builds and tests on Node 20)
 - A [Supabase](https://supabase.com) project (free tier works)
 
 ### Database setup
@@ -22,9 +22,15 @@ It calculates your German statutory + contractual vacation entitlement, knows th
 3. `npm run dev`
 
 ### Deploy to GitHub Pages
-Add two repository secrets (Settings → Secrets and variables → Actions):
+Pushes to `main` build and deploy automatically via GitHub Actions
+(Settings → Pages → Source must be **GitHub Actions**).
+
+Add two **repository** secrets (Settings → Secrets and variables → Actions):
 - `VITE_SUPABASE_URL` — your Supabase project URL
 - `VITE_SUPABASE_ANON_KEY` — your Supabase anon key
+
+These are inlined at build time. If they're missing, the deployed page
+shows a "Configuration needed" message instead of loading.
 
 ### Auth model
 - Open signup — anyone with the URL can register
