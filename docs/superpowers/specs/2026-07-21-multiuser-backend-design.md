@@ -104,7 +104,7 @@ invited is created as `member` — never `admin`.
 | Field | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
-| group_id | uuid | Links the per-year segments of one submitted vacation (see below). A single-year request has one row whose `group_id = id` semantics are not required — just a shared id across its segments. |
+| group_id | uuid | Shared id linking the per-year segments of one submitted vacation (see below). Every request has a `group_id`; a single-year vacation is simply a group of one. |
 | user_id | uuid FK→users | Whose vacation |
 | start_date / end_date | date | Segment bounds (clamped to the calendar year for cross-year vacations) |
 | work_days | numeric | Working days excluding weekends + public holidays; supports 0.5 |
