@@ -85,27 +85,31 @@ Four tables. Fresh schema via Prisma migrations.
 | Field | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
+| clerk_id | text unique | Clerk subject ID — the stable join key (survives email changes / re-invites) |
 | email | text unique | Must be `@vago-solutions.ai` |
 | display_name | text | |
-| role | enum(`admin`,`member`) | Two-tier role |
+| role | enum(`admin`,`member`) | Two-tier role. **Auto-created (non-invited) users default to `member`.** |
 | region | text | German federal state code (e.g. `BW`), for public holidays |
 | employment_start_date | date? | Null until onboarding; used to pro-rate entitlement |
 | is_active | bool | Inactive users are rejected at the API even if Clerk auth succeeds |
 | created_at | timestamptz | |
 
 Clerk holds the credential/identity; this row holds app-specific profile + role. On
-first authenticated request, the API upserts a `users` row keyed by email / Clerk ID.
+first authenticated request, the API upserts a `users` row keyed by `clerk_id` (email is
+also unique but can change). An unexpected domain-allowlisted sign-up that was never
+invited is created as `member` — never `admin`.
 
 ### 3.2 `leave_requests` (core new table)
 
 | Field | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
+| group_id | uuid | Links the per-year segments of one submitted vacation (see below). A single-year request has one row whose `group_id = id` semantics are not required — just a shared id across its segments. |
 | user_id | uuid FK→users | Whose vacation |
-| start_date / end_date | date | |
+| start_date / end_date | date | Segment bounds (clamped to the calendar year for cross-year vacations) |
 | work_days | numeric | Working days excluding weekends + public holidays; supports 0.5 |
-| type | enum(`statutory`,`contractual`) | Two buckets |
-| year | int | Entitlement year the request counts against |
+| type | enum(`statutory`,`contractual`) | Two buckets. **Member-chosen per request; no automatic statutory→contractual overflow.** |
+| year | int | Entitlement year this segment counts against |
 | is_carry_over | bool | Uses previous year's carry-over |
 | status | enum(`pending`,`approved`,`rejected`,`cancelled`) | Approval state |
 | reason | text | Employee's note (hidden from peers) |
@@ -114,9 +118,19 @@ first authenticated request, the API upserts a `users` row keyed by email / Cler
 | decision_note | text? | Admin's note (e.g. rejection reason) |
 | created_at / updated_at | timestamptz | |
 
-Admin "record on behalf of" = create a row with `status='approved'`, `decided_by = admin`.
+Admin "record on behalf of" = create a row (or group) with `status='approved'`,
+`decided_by = admin`.
 
-Index on `(user_id, year)` and `(status, start_date)` for the team timeline query.
+**Cross-year vacations.** A vacation spanning a year boundary (e.g. Dec 29 → Jan 3) is
+split by `countWorkDaysByYear` (src/utils.ts:79) into **one row per calendar year**, all
+sharing the same `group_id`. Each row carries its own `year` and `work_days` so each
+year's balance is charged correctly. A single-year vacation is one row. The approval
+state machine and every transition operate on the **whole `group_id` as a unit** (see §4
+and §5): you cannot approve one half of a vacation and reject the other, and the
+creation balance check covers all segments atomically.
+
+Index on `(user_id, year)`, `(status, start_date)` for the team timeline query, and
+`(group_id)`.
 
 ### 3.3 `app_settings` (single global row)
 
@@ -174,6 +188,12 @@ inside a single database transaction (row/serializable locking), so two near-
 simultaneous requests that together exceed the balance cannot both succeed. This
 atomic check is a key reason for the API-in-front (approach B) over client-direct + RLS.
 
+**Cross-year in one transaction:** for a vacation that spans a year boundary, the balance
+check for **every** year segment and the insert of **all** segment rows happen in the
+same transaction. If any segment's year is over budget, the whole vacation is rejected —
+no partial creation. Likewise approve/reject/cancel update all rows of the `group_id`
+together.
+
 ## 6. Authentication (Clerk)
 
 - Frontend uses Clerk's prebuilt components for login/signup/password-reset.
@@ -199,11 +219,13 @@ per-resource ownership checks.
 **Leave requests**
 - `GET /leave-requests?year=&userId=` — member: own only; admin: any/all
 - `POST /leave-requests` — member: creates `pending` for self with transactional balance
-  check; admin: creates for anyone, auto-`approved`
+  check; admin: creates for anyone, auto-`approved`. A cross-year vacation produces a
+  linked group of rows (one per year, shared `group_id`) in one transaction.
 - `GET /leave-requests/:id` — own or admin
-- `POST /leave-requests/:id/cancel` — member cancels own pending/future; admin any
-- `POST /leave-requests/:id/approve` — admin only
-- `POST /leave-requests/:id/reject` — admin only (with `decision_note`)
+- `POST /leave-requests/:id/cancel` — member cancels own pending/future; admin any.
+  Acts on the whole `group_id`.
+- `POST /leave-requests/:id/approve` — admin only. Acts on the whole `group_id`.
+- `POST /leave-requests/:id/reject` — admin only (with `decision_note`). Acts on the whole `group_id`.
 
 **Balance**
 - `GET /balance?year=&userId=` — entitlement/used/available per bucket; member self, admin any
