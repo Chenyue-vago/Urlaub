@@ -2,9 +2,29 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { User } from "@prisma/client";
 import { prisma } from "../db.js";
 import { AppError } from "../lib/errors.js";
+import { env } from "../env.js";
 import type { AuthIdentity, Authenticator } from "./types.js";
 
-const ALLOWED_DOMAIN = "@vago-solutions.ai";
+/**
+ * Parse the comma-separated `ALLOWED_EMAIL_DOMAINS` env value into a normalized
+ * list: trimmed, lowercased, leading "@" stripped, empties dropped.
+ */
+export function parseAllowedDomains(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((d) => d.trim().toLowerCase().replace(/^@/, ""))
+    .filter((d) => d.length > 0);
+}
+
+/**
+ * True when `email` belongs to one of `allowedDomains`. Matching is anchored at
+ * the "@" boundary so a domain like "gmail.com" never accepts "x@notgmail.com".
+ * An empty allowlist fails closed (rejects everything).
+ */
+export function isEmailAllowed(email: string, allowedDomains: string[]): boolean {
+  const lower = email.toLowerCase();
+  return allowedDomains.some((domain) => lower.endsWith(`@${domain}`));
+}
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -25,7 +45,7 @@ declare module "fastify" {
  * - Rejects deactivated accounts even though their row already exists.
  */
 export async function resolveUser(identity: AuthIdentity): Promise<User> {
-  if (!identity.email.toLowerCase().endsWith(ALLOWED_DOMAIN)) {
+  if (!isEmailAllowed(identity.email, parseAllowedDomains(env.ALLOWED_EMAIL_DOMAINS))) {
     throw new AppError(
       "Email domain is not allowed",
       "email_domain_not_allowed",
