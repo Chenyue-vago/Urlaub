@@ -6,3 +6,5 @@ dist/
 packages/web/src/data/
 packages/api/.env
 packages/web/.env
+CLAUDE.md
+docs/
