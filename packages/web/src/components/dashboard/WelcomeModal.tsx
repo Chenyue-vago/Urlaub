@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getTranslator } from '../../i18n';
+import { useTranslation } from '../../i18n';
 import { REGIONS, DEFAULT_REGION, type RegionCode } from '@urlaub/shared';
 
 function isValidIsoDate(s: string): boolean {
@@ -13,7 +13,7 @@ interface WelcomeModalProps {
 }
 
 export function WelcomeModal({ onSubmit, submitting }: WelcomeModalProps) {
-  const tw = getTranslator('en');
+  const { t: tw } = useTranslation();
   const [draftDate, setDraftDate] = useState('');
   const [region, setRegion] = useState<RegionCode>(DEFAULT_REGION);
   const [error, setError] = useState(false);

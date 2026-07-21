@@ -85,8 +85,19 @@ export function MyDashboard() {
     });
   };
 
-  if (me.isLoading || !me.data) {
+  if (me.isLoading) {
     return <div className="main">…</div>;
+  }
+
+  if (me.isError || !me.data) {
+    return (
+      <div className="main">
+        <p className="form-error">{t('errors.loadFailed')}</p>
+        <button className="btn btn-primary" onClick={() => me.refetch()}>
+          {t('errors.retry')}
+        </button>
+      </div>
+    );
   }
 
   const needsOnboarding = !me.data.employmentStartDate;
@@ -96,6 +107,15 @@ export function MyDashboard() {
     <main className="main">
       <YearNav year={selectedYear} onChange={handleYearChange} />
 
+      {balance.isLoading && <p>{t('dashboard.loading')}</p>}
+      {balance.isError && (
+        <div className="form-group">
+          <p className="form-error">{t('errors.loadFailed')}</p>
+          <button className="btn btn-ghost" onClick={() => balance.refetch()}>
+            {t('errors.retry')}
+          </button>
+        </div>
+      )}
       {balance.data && <StatsCards stats={balance.data} />}
 
       <div className="actions">
@@ -105,12 +125,23 @@ export function MyDashboard() {
         </button>
       </div>
 
-      <RecordList
-        records={leaveRequests.data ?? []}
-        selectedYear={selectedYear}
-        onCancel={handleCancel}
-        cancellingId={cancellingId}
-      />
+      {leaveRequests.isLoading ? (
+        <p>{t('dashboard.loading')}</p>
+      ) : leaveRequests.isError ? (
+        <div className="form-group">
+          <p className="form-error">{t('errors.loadFailed')}</p>
+          <button className="btn btn-ghost" onClick={() => leaveRequests.refetch()}>
+            {t('errors.retry')}
+          </button>
+        </div>
+      ) : (
+        <RecordList
+          records={leaveRequests.data ?? []}
+          selectedYear={selectedYear}
+          onCancel={handleCancel}
+          cancellingId={cancellingId}
+        />
+      )}
 
       {showAddForm && (
         <RecordModal

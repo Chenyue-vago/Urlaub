@@ -8,9 +8,21 @@ import { Team } from './pages/Team';
 import { Admin } from './pages/Admin';
 
 function AdminRoute() {
+  const { t } = useTranslation();
   const me = useMe();
   if (me.isLoading) return null;
-  if (me.data?.role !== 'admin') return <Navigate to="/" replace />;
+  if (me.isError) {
+    return (
+      <div className="main">
+        <p className="form-error">{t('errors.loadFailed')}</p>
+        <button className="btn btn-primary" onClick={() => me.refetch()}>
+          {t('errors.retry')}
+        </button>
+      </div>
+    );
+  }
+  if (!me.data) return null;
+  if (me.data.role !== 'admin') return <Navigate to="/" replace />;
   return <Admin />;
 }
 

@@ -135,6 +135,10 @@ const zh: Dict = {
   'errors.last_admin': '不能移除最后一位管理员',
   'errors.concurrent_request': '操作冲突，请刷新后重试',
   'errors.generic': '发生错误，请重试',
+  'errors.loadFailed': '加载失败，请重试',
+  'errors.retry': '重试',
+
+  'dashboard.loading': '加载中…',
 };
 
 const en: Dict = {
@@ -259,6 +263,10 @@ const en: Dict = {
   'errors.last_admin': 'Cannot remove the last remaining admin',
   'errors.concurrent_request': 'This conflicted with another change, please refresh and retry',
   'errors.generic': 'Something went wrong, please try again',
+  'errors.loadFailed': 'Failed to load, please try again',
+  'errors.retry': 'Retry',
+
+  'dashboard.loading': 'Loading…',
 };
 
 const DICTS: Record<Locale, Dict> = { zh, en };

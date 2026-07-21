@@ -8,7 +8,7 @@ Project guidance for Claude Code working in this repo.
       `pull_request` events (currently CI only runs on push to `main`). This is
       required so the `main` branch-protection ruleset can gate merges on
       "CI must pass".
-- [ ] M6/M7: migrate `packages/web` off its local `src/utils.ts` entitlement
+- [x] M6/M7: migrate `packages/web` off its local `src/utils.ts` entitlement
       math — make it use `@urlaub/shared` (App.tsx currently still imports the
       old hardcoded copy; remove it when App.tsx becomes the thin router
       shell).

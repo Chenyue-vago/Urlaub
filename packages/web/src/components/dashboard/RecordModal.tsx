@@ -41,7 +41,6 @@ export function RecordModal({ region, onSubmit, onClose, submitting }: RecordMod
             {t('modal.startDate')}
             <input
               type="date"
-              aria-label={t('modal.startDate')}
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
@@ -52,7 +51,6 @@ export function RecordModal({ region, onSubmit, onClose, submitting }: RecordMod
             {t('modal.endDate')}
             <input
               type="date"
-              aria-label={t('modal.endDate')}
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
@@ -97,8 +95,9 @@ export function RecordModal({ region, onSubmit, onClose, submitting }: RecordMod
           </div>
         </div>
         <div className="form-group">
-          <label>{t('dashboard.reasonLabel')}</label>
+          <label htmlFor="record-reason">{t('dashboard.reasonLabel')}</label>
           <input
+            id="record-reason"
             type="text"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
