@@ -52,8 +52,10 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
   const now = new Date();
   const status = isAdmin ? "approved" : "pending";
 
-  const created = await prisma.$transaction(
-    async (tx) => {
+  let created: LeaveRequest[];
+  try {
+    created = await prisma.$transaction(
+      async (tx) => {
       const rows: LeaveRequest[] = [];
       for (const seg of segments) {
         if (seg.days <= 0) continue;
@@ -101,10 +103,19 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
         },
       });
 
-      return rows;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-  );
+        return rows;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+  } catch (err) {
+    // Serializable can abort the losing side of a concurrent reservation with
+    // a write-conflict (P2034). Surface it as a clean 409 instead of a 500 so
+    // the caller can safely retry; the balance guarantee is never violated.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
+      throw conflict("concurrent_request");
+    }
+    throw err;
+  }
 
   return created;
 }
