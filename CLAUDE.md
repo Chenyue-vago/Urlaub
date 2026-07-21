@@ -25,3 +25,11 @@ Project guidance for Claude Code working in this repo.
       milestone).
 - [ ] Enforce a required `decision_note` on reject at the M5 route layer
       (spec §7); the service currently accepts an optional note.
+- [ ] Auth hardening (M3 review, non-blocking): require `CLERK_SECRET_KEY` at
+      `buildServer()` time for the real `ClerkAuthenticator` path so a missing
+      key fails loudly at startup instead of 401-ing every request in prod.
+- [ ] Auth hardening: pass `authorizedParties` to Clerk `verifyToken` for
+      audience pinning (defense-in-depth if the secret is shared across envs).
+- [ ] Make `resolveUser` upsert race-safe: catch Prisma P2002 on the create
+      branch (concurrent first-time login of the same clerkId) and re-fetch,
+      instead of surfacing a 500.
