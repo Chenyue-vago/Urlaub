@@ -12,7 +12,15 @@ describe("GET /balance", () => {
       headers: bearer(tokenFor(member)),
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json().statutory.total).toBe(20);
+    // The HTTP contract is the shared flat YearlyVacationStats shape (what the
+    // web StatsCards consumes), not the service's internal nested Balance.
+    const body = res.json();
+    expect(body.statutory).toBeUndefined();
+    expect(body.statutoryTotal).toBe(20);
+    expect(body.statutoryUsed).toBe(0);
+    expect(body.statutoryRemaining).toBe(20);
+    expect(body.contractualTotal).toBe(8);
+    expect(body.carryOver).toBe(0);
   });
 
   it("member requesting another user's balance -> forbidden", async () => {
@@ -37,6 +45,6 @@ describe("GET /balance", () => {
       headers: bearer(tokenFor(admin)),
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json().statutory.total).toBe(20);
+    expect(res.json().statutoryTotal).toBe(20);
   });
 });
