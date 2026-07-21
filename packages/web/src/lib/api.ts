@@ -45,9 +45,14 @@ export function createApi(getToken: GetToken): Api {
   async function apiFetch<T = unknown>(path: string, options: ApiFetchOptions = {}): Promise<T> {
     const { method = "GET", body, query } = options;
 
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+    const headers: Record<string, string> = {};
+
+    // Only declare a JSON body when we actually send one. Setting
+    // Content-Type: application/json on a bodyless request makes Fastify's JSON
+    // parser reject it (empty body), which 500s POSTs like approve/cancel.
+    if (body !== undefined) {
+      headers["Content-Type"] = "application/json";
+    }
 
     const token = await getToken();
     if (token) {

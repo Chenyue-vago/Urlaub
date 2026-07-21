@@ -73,11 +73,13 @@ export function ApprovalsQueue() {
     showError(translateApiErrorCode(code, t));
   };
 
+  // The backend decides the whole group in one call (it resolves the group
+  // from any row id), so call once per group — NOT once per row, which would
+  // make cross-year (multi-row) groups fail on the second row with
+  // invalid_transition.
   const handleApprove = async (group: ApprovalGroup) => {
     try {
-      for (const item of group.items) {
-        await approveMutation.mutateAsync(item.id);
-      }
+      await approveMutation.mutateAsync(group.items[0].id);
       showSuccess(t('admin.approveSuccess'));
     } catch (err) {
       onActionError(err);
@@ -92,9 +94,7 @@ export function ApprovalsQueue() {
       return;
     }
     try {
-      for (const item of group.items) {
-        await rejectMutation.mutateAsync({ id: item.id, note });
-      }
+      await rejectMutation.mutateAsync({ id: group.items[0].id, note });
       showSuccess(t('admin.rejectSuccess'));
     } catch (err) {
       onActionError(err);

@@ -44,6 +44,8 @@ export function useUpdateUser() {
       updateUser(api, id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminUsersQueryKey });
+      // Role changes / (de)activations are audited — refresh the log.
+      queryClient.invalidateQueries({ queryKey: ["admin", "audit-log"] });
     },
   });
 }

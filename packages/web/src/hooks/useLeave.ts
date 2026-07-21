@@ -22,6 +22,9 @@ function invalidateLeaveQueries() {
   queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
   queryClient.invalidateQueries({ queryKey: ["balance"] });
   queryClient.invalidateQueries({ queryKey: ["calendar"] });
+  // Approvals/rejections/cancellations/creations all write an audit row, so
+  // refresh the admin audit log too.
+  queryClient.invalidateQueries({ queryKey: ["admin", "audit-log"] });
 }
 
 export function useLeaveRequests(params: ListLeaveRequestsParams = {}) {

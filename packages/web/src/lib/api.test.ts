@@ -23,6 +23,36 @@ describe("createApi success body handling", () => {
     const api = createApi(async () => null);
     await expect(api.apiFetch("/leave-requests/1/cancel", { method: "POST" })).resolves.toBeUndefined();
   });
+
+  it("omits Content-Type on a bodyless request (empty JSON body breaks the server)", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+    } as unknown as Response);
+
+    const api = createApi(async () => null);
+    await api.apiFetch("/leave-requests/1/approve", { method: "POST" });
+
+    const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(init.body).toBeUndefined();
+    expect(init.headers["Content-Type"]).toBeUndefined();
+  });
+
+  it("sets Content-Type when a body is present", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+    } as unknown as Response);
+
+    const api = createApi(async () => null);
+    await api.apiFetch("/leave-requests/1/reject", { method: "POST", body: { note: "no" } });
+
+    const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(init.headers["Content-Type"]).toBe("application/json");
+    expect(JSON.parse(init.body)).toEqual({ note: "no" });
+  });
 });
 
 describe("createApi base URL handling", () => {
