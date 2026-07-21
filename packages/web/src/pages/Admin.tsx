@@ -3,7 +3,6 @@ import { useTranslation } from '../i18n';
 import { ApprovalsQueue } from '../components/admin/ApprovalsQueue';
 import { UserTable } from '../components/admin/UserTable';
 import { InviteUserForm } from '../components/admin/InviteUserForm';
-import { SettingsCard } from '../components/admin/SettingsCard';
 import { AuditLog } from '../components/admin/AuditLog';
 
 export function Admin() {
@@ -28,7 +27,6 @@ export function Admin() {
           <InviteUserForm />
         </section>
         <UserTable />
-        <SettingsCard />
         <AuditLog />
       </div>
     </main>
