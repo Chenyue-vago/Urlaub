@@ -37,7 +37,7 @@ packages/
                                   #     getYearlyEntitlement, calculateYearlyStats, carry-over —
                                   #     PARAMETERIZED by EntitlementConfig (no hardcoded 20/8/03-31)
       data/de-holidays.json       #   moved from src/data/
-    test/*.test.ts                #   reuse src/utils.test.ts + supabase-backup's parameterized tests
+    test/*.test.ts                #   parameterized tests sourced from supabase-backup:src/utils.test.ts
   api/                            # NEW — Fastify backend
     package.json
     prisma/schema.prisma          #   users, leave_requests, app_settings, audit_log
@@ -84,12 +84,12 @@ packages/
 
 **Files:** Create `package.json` (root); move all current frontend files into `packages/web/`.
 
-- [ ] **Step 1:** Move the frontend (preserve history):
+- [ ] **Step 1:** Move the frontend (preserve history). Do NOT move `package-lock.json` — delete it; the authoritative lockfile is regenerated at the workspace root by `npm install` in Step 4:
 ```bash
 mkdir -p packages/web
 git mv src index.html vite.config.ts tsconfig.json tsconfig.node.json public scripts packages/web/
 git mv package.json packages/web/package.json
-git mv package-lock.json packages/web/package-lock.json 2>/dev/null || true
+git rm --cached package-lock.json 2>/dev/null && rm -f package-lock.json || true
 ```
 - [ ] **Step 2:** Create root `package.json`:
 ```json
@@ -162,7 +162,7 @@ export const DEFAULT_ENTITLEMENT: EntitlementConfig = {
 
 **Files:** Create `packages/shared/src/entitlement.ts`, `packages/shared/test/entitlement.test.ts`.
 
-- [ ] **Step 1: Write failing tests** — copy `packages/web/src/utils.test.ts` cases and the parameterized cases from `git show supabase-backup:src/utils.test.ts`. Key assertions:
+- [ ] **Step 1: Write failing tests** — source the cases from `git show supabase-backup:src/utils.test.ts` (the only existing test file; there are no test files on the current branch). Key assertions:
 ```ts
 import { calculateYearlyStats, getYearlyEntitlement, countWorkDaysByYear } from "../src/entitlement";
 import { DEFAULT_ENTITLEMENT } from "../src/types";
@@ -183,7 +183,7 @@ test("config overrides hardcoded defaults", () => {
 });
 ```
 - [ ] **Step 2: Run, verify fail:** `npm --workspace packages/shared test` → FAIL (module not found).
-- [ ] **Step 3: Implement** — copy the functions from `packages/web/src/utils.ts` (lines 32–240: `isWeekend`→`calculateCarryOver`) into `entitlement.ts`, replacing the module-level `STATUTORY_VACATION_DAYS`/`CONTRACTUAL_VACATION_DAYS` constants and the literal `"${year}-03-31"` deadline with an `EntitlementConfig` parameter threaded through `getYearlyEntitlement` and `calculateYearlyStats`. (The `supabase-backup` version already did this — prefer `git show supabase-backup:src/utils.ts` as the reference implementation.)
+- [ ] **Step 3: Implement** — copy the pure functions `isWeekend`, `getWorkDayDates`, `countWorkDays`, `countWorkDaysByYear`, `getYearlyEntitlement`, `calculateYearlyStats`, `isWithinCarryOverPeriod`, `calculateCarryOver` from `packages/web/src/utils.ts` into `entitlement.ts` (leave the localStorage functions behind), replacing the module-level `STATUTORY_VACATION_DAYS`/`CONTRACTUAL_VACATION_DAYS` constants and the literal `"${year}-03-31"` deadline with an `EntitlementConfig` parameter threaded through `getYearlyEntitlement` and `calculateYearlyStats`. **The `supabase-backup` version already did exactly this parameterization** — use `git show supabase-backup:src/utils.ts` as the reference implementation and adapt.
 - [ ] **Step 4: Run, verify pass:** `npm --workspace packages/shared test` → PASS.
 - [ ] **Step 5:** `npm --workspace packages/shared run build` → `dist/` produced. Commit `feat(shared): parameterized entitlement math with tests`.
 
@@ -307,7 +307,7 @@ Each route task = write route + integration test asserting status + permission. 
 - [ ] member→self, admin→any `userId`. Test + commit.
 
 ### Task 5.4: `GET /calendar` (team timeline)
-- [ ] Returns **approved-only** rows in `[from,to]` for **all** users; response shape exposes only `{ userId, displayName, startDate, endDate, type }` — **never** `reason`/`decisionNote`. Test asserts a member can call it AND that `reason` is absent. Commit.
+- [ ] Returns **approved-only** rows in `[from,to]` for **all** users; response shape exposes only `{ userId, displayName, startDate, endDate, type, status }` (status is always `approved`) — **never** `reason`/`decisionNote`. Test asserts a member can call it AND that `reason` is absent. Commit.
 
 ### Task 5.5: Admin routes
 - [ ] `GET /admin/users` (+usage), `POST /admin/users/invite` (Clerk invite + pre-create row), `PATCH /admin/users/:id` (role/isActive) with **last-admin guard** (`AppError("last_admin",409)` on demote/deactivate of the only admin), `GET /settings`, `PATCH /settings`, `GET /admin/audit-log`. Test each; commit per group.
@@ -323,9 +323,12 @@ Each route task = write route + integration test asserting status + permission. 
 **Files:** Create `packages/web/src/lib/clerk.tsx`, `lib/api.ts`, `queryClient.ts`; add deps `@clerk/clerk-react`, `@tanstack/react-query`, `react-router-dom`.
 - [ ] `ClerkProvider` wrapping the app; `<SignedIn>/<SignedOut>` gate. `api.ts` = `fetch` wrapper injecting the Clerk session token and throwing typed errors from `{error,code}`. Commit.
 
-### Task 6.2: Services + hooks
-**Files:** Create `services/{me,leave,balance,calendar,admin}.ts` + `hooks/*`.
-- [ ] Thin functions calling `api.ts`; TanStack Query hooks with optimistic updates on create/cancel. Reuse shape from `git show supabase-backup:src/services/*` but point at REST instead of supabase-js. Commit per service.
+### Task 6.2: Services + hooks (TDD — mocked API, satisfies spec §12 "service tests with a mocked API")
+**Files:** Create `services/{me,leave,balance,calendar,admin}.ts` + `hooks/*` + `services/*.test.ts`.
+- [ ] **Step 1: Write failing tests** — with `fetch` mocked (e.g. `vi.fn`), assert each service calls the right method/URL, attaches the auth token, and maps a `{error,code}` body to a thrown typed error (test `leave.create` on a 409 → throws `insufficient_balance`).
+- [ ] **Step 2: Run, verify fail.**
+- [ ] **Step 3: Implement** thin functions calling `api.ts`; TanStack Query hooks with optimistic updates on create/cancel. Reuse shape from `git show supabase-backup:src/services/*` but point at REST instead of supabase-js.
+- [ ] **Step 4: Run, verify pass.** Commit per service.
 
 ### Task 6.3: Remove localStorage layer
 - [ ] Delete `saveToStorage/loadFromStorage/export/import` usage from web; `regions.ts`/`holidays.ts` in web become re-exports of `@urlaub/shared`. Commit.
@@ -334,8 +337,12 @@ Each route task = write route + integration test asserting status + permission. 
 
 ## Milestone 7 — Frontend views
 
-### Task 7.1: Router shell + My Dashboard
-- [ ] `App.tsx` → react-router with routes `/` (dashboard), `/team`, `/admin` (admin-gated). Reuse `dashboard/` components from `supabase-backup` (`StatsCards`, `RecordList`, `RecordModal`, `YearNav`, `WelcomeModal`, `SettingsModal`), wired to hooks. Request-vacation modal calls `POST /leave-requests`; shows status badges. Commit.
+### Task 7.1: Router shell + My Dashboard (TDD — component test, satisfies spec §12 "request → status flow")
+**Files:** modify `App.tsx`; create `components/dashboard/RecordModal.test.tsx` (or the request-flow component's test).
+- [ ] **Step 1: Write a failing component test** (Vitest + Testing Library, `@urlaub/shared` real, API hook mocked): rendering the request-vacation flow, submitting a valid request shows a **pending** status badge; a submit that the mocked hook rejects with `insufficient_balance` surfaces the error and shows **no** new pending row.
+- [ ] **Step 2: Run, verify fail.**
+- [ ] **Step 3: Implement** `App.tsx` → react-router with routes `/` (dashboard), `/team`, `/admin` (admin-gated). Reuse `dashboard/` components from `supabase-backup` (`StatsCards`, `RecordList`, `RecordModal`, `YearNav`, `WelcomeModal`, `SettingsModal`), wired to hooks. Request-vacation modal calls `POST /leave-requests`; shows status badges.
+- [ ] **Step 4: Run, verify pass.** Commit.
 
 ### Task 7.2: Team Timeline
 **Files:** Create `components/timeline/TeamTimeline.tsx`.
@@ -379,7 +386,7 @@ Each route task = write route + integration test asserting status + permission. 
 ---
 
 ## Notes for the executor
-- **TDD**: every service/route task writes the failing test first. Integration tests use `TEST_DATABASE_URL` (the `urlaub_test` db), truncated between tests.
+- **TDD everywhere**: every shared-math, service, route, **frontend service, and frontend component** task writes the failing test first. API integration tests use `TEST_DATABASE_URL` (the `urlaub_test` db), truncated between tests. Frontend tests mock the API/hook layer (Vitest + Testing Library) — never hit a real backend. This satisfies spec §12 across all layers.
 - **DRY**: the entitlement/holiday math lives ONLY in `@urlaub/shared`; never re-implement it in api or web.
 - **Frequent commits**: one commit per task step-group as shown.
 - **Reuse**: prefer adapting `supabase-backup` files (`git show supabase-backup:<path>`) over greenfield code for the frontend components, services shape, and parameterized math.
