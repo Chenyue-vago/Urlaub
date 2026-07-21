@@ -108,3 +108,96 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
 
   return created;
 }
+
+export interface DecideLeaveInput {
+  actor: Actor;
+  groupId: string;
+  action: "approve" | "reject";
+  note?: string;
+}
+
+/**
+ * Approve or reject an entire pending group at once. Admin only. Rejecting
+ * frees the reserved balance (rejected rows no longer count); approving keeps
+ * the days counted as used.
+ */
+export async function decideLeave(input: DecideLeaveInput): Promise<LeaveRequest[]> {
+  const { actor, groupId, action, note } = input;
+  if (actor.role !== "admin") throw forbidden("forbidden");
+
+  const newStatus = action === "approve" ? "approved" : "rejected";
+  const now = new Date();
+
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.leaveRequest.findMany({ where: { groupId } });
+    if (rows.length === 0) throw notFound("leave_not_found");
+    if (rows.some((r) => r.status !== "pending")) {
+      throw conflict("invalid_transition");
+    }
+
+    await tx.leaveRequest.updateMany({
+      where: { groupId },
+      data: { status: newStatus, decidedById: actor.id, decidedAt: now, decisionNote: note ?? null },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: actor.id,
+        action: action === "approve" ? "approve_leave" : "reject_leave",
+        targetType: "leave_group",
+        targetId: groupId,
+        metadata: { targetUserId: rows[0].userId, note: note ?? null },
+      },
+    });
+
+    return tx.leaveRequest.findMany({ where: { groupId }, orderBy: { year: "asc" } });
+  });
+}
+
+export interface CancelLeaveInput {
+  actor: Actor;
+  groupId: string;
+}
+
+/**
+ * Cancel an entire group. Admins may cancel any group; members may cancel
+ * their OWN group only while it is still pending/approved and not fully in
+ * the past. Cancelled rows no longer count toward used balance.
+ */
+export async function cancelLeave(input: CancelLeaveInput): Promise<LeaveRequest[]> {
+  const { actor, groupId } = input;
+  const isAdmin = actor.role === "admin";
+
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.leaveRequest.findMany({ where: { groupId } });
+    if (rows.length === 0) throw notFound("leave_not_found");
+
+    const ownerId = rows[0].userId;
+    if (!isAdmin && ownerId !== actor.id) throw forbidden("forbidden");
+
+    if (rows.some((r) => r.status !== "pending" && r.status !== "approved")) {
+      throw conflict("invalid_transition");
+    }
+
+    if (!isAdmin) {
+      // Members can only cancel leave that has not fully ended yet.
+      const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+      const latestEnd = rows.reduce((max, r) => (r.endDate > max ? r.endDate : max), rows[0].endDate);
+      if (latestEnd < today) throw conflict("invalid_transition");
+    }
+
+    await tx.leaveRequest.updateMany({ where: { groupId }, data: { status: "cancelled" } });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: actor.id,
+        action: "cancel_leave",
+        targetType: "leave_group",
+        targetId: groupId,
+        metadata: { targetUserId: ownerId },
+      },
+    });
+
+    return tx.leaveRequest.findMany({ where: { groupId }, orderBy: { year: "asc" } });
+  });
+}
