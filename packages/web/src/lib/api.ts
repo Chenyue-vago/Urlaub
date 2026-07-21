@@ -35,7 +35,12 @@ function buildUrl(baseUrl: string, path: string, query?: ApiFetchOptions["query"
 }
 
 export function createApi(getToken: GetToken): Api {
-  const baseUrl = import.meta.env.VITE_API_URL ?? "";
+  const baseUrl = import.meta.env.VITE_API_URL;
+  if (!baseUrl) {
+    throw new Error(
+      "VITE_API_URL is not set. Configure it in packages/web/.env (see .env.example)."
+    );
+  }
 
   async function apiFetch<T = unknown>(path: string, options: ApiFetchOptions = {}): Promise<T> {
     const { method = "GET", body, query } = options;
@@ -74,7 +79,12 @@ export function createApi(getToken: GetToken): Api {
       return undefined as T;
     }
 
-    return (await response.json()) as T;
+    try {
+      return (await response.json()) as T;
+    } catch {
+      // Empty or non-JSON success body (e.g. 200/201 with no content) - treat as no data.
+      return undefined as T;
+    }
   }
 
   return { apiFetch };
