@@ -1,29 +1,11 @@
 {
-  "name": "urlaub-manager",
+  "name": "urlaub-monorepo",
   "private": true,
-  "version": "1.0.0",
-  "type": "module",
+  "workspaces": ["packages/*"],
   "scripts": {
-    "extract:de-holidays": "node scripts/extract-de-holidays.mjs",
-    "predev": "npm run extract:de-holidays",
-    "prebuild": "npm run extract:de-holidays",
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "date-fns": "^3.3.1",
-    "date-holidays-parser": "^3.4.7",
-    "lucide-react": "^0.312.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.48",
-    "@types/react-dom": "^18.2.18",
-    "@vitejs/plugin-react": "^4.2.1",
-    "date-holidays": "^3.27.0",
-    "typescript": "^5.3.3",
-    "vite": "^5.0.12"
+    "dev:web": "npm --workspace packages/web run dev",
+    "dev:api": "npm --workspace packages/api run dev",
+    "test": "npm --workspaces --if-present run test",
+    "build": "npm --workspaces --if-present run build"
   }
 }

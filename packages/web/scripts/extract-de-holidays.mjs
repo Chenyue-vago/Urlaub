@@ -6,10 +6,16 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const SRC = resolve(ROOT, 'node_modules/date-holidays/data/holidays.json');
+const require = createRequire(import.meta.url);
+// Resolve via Node's module resolution (not a hardcoded relative path) so this
+// works whether date-holidays lives in this package's node_modules or is
+// hoisted to the workspace root's node_modules by npm workspaces.
+const packageJsonPath = require.resolve('date-holidays/package.json');
+const SRC = resolve(dirname(packageJsonPath), 'data/holidays.json');
 const OUT_DIR = resolve(ROOT, 'src/data');
 const OUT = resolve(OUT_DIR, 'de-holidays.json');
 
