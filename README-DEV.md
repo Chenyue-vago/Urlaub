@@ -13,10 +13,10 @@ Clerk auth.
   ```
 - Docker (for the Postgres container).
 - `packages/api/.env` with `DATABASE_URL`, `TEST_DATABASE_URL`, Clerk keys,
-  `WEB_ORIGIN=http://localhost:5173`, and **`PORT=3001`** (port 3000 is taken
-  on this machine, so the API is run on 3001 — see step 5).
+  `WEB_ORIGIN=http://localhost:5173`, and **`PORT=3002`** (port 3000 is taken
+  on this machine, so the API is run on 3002 — see step 5).
 - `packages/web/.env` with `VITE_CLERK_PUBLISHABLE_KEY` and
-  `VITE_API_URL=http://localhost:3001`.
+  `VITE_API_URL=http://localhost:3002`.
 
 These `.env` files are gitignored; copy from `.env.example` in each package
 if you don't have them yet and fill in the Clerk keys.
@@ -57,13 +57,13 @@ Admin Approvals Queue (pending requests, including one cross-year request
 split into linked segments via a shared `group_id`) have realistic content
 out of the box.
 
-## 4. Run the API (port 3001)
+## 4. Run the API (port 3002)
 
 ```bash
-PORT=3001 npm --workspace packages/api run dev
+PORT=3002 npm --workspace packages/api run dev
 ```
 
-Verify it's up: `curl localhost:3001/health` -> `{"status":"ok"}`.
+Verify it's up: `curl localhost:3002/health` -> `{"status":"ok"}`.
 
 ## 5. Run the web app (port 5173)
 
