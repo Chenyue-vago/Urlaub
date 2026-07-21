@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { UserButton } from '@clerk/clerk-react';
-import { Palmtree, Globe } from 'lucide-react';
+import { Palmtree, Globe, Settings } from 'lucide-react';
 import { LOCALES, Locale, useTranslation } from './i18n';
 import { useMe } from './hooks/useMe';
 import { MyDashboard } from './components/dashboard/MyDashboard';
 import { Team } from './pages/Team';
 import { Admin } from './pages/Admin';
+import { RegionSelect } from './components/RegionSelect';
+import { SettingsModal } from './components/SettingsModal';
 
 function AdminRoute() {
   const { t } = useTranslation();
@@ -30,6 +33,7 @@ function App() {
   const { locale, setLocale, t } = useTranslation();
   const me = useMe();
   const isAdmin = me.data?.role === 'admin';
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <div className="app">
@@ -46,6 +50,7 @@ function App() {
               {isAdmin && <Link to="/admin">{t('nav.admin')}</Link>}
             </nav>
             <div className="header-controls">
+              {me.data && <RegionSelect />}
               <label className="header-select">
                 <Globe size={16} />
                 <span className="sr-only">{t('header.language')}</span>
@@ -61,6 +66,16 @@ function App() {
                   ))}
                 </select>
               </label>
+              {me.data && (
+                <button
+                  className="header-icon-btn"
+                  onClick={() => setShowSettings(true)}
+                  aria-label={t('header.settings')}
+                  title={t('header.settings')}
+                >
+                  <Settings size={18} />
+                </button>
+              )}
               <UserButton afterSignOutUrl="/" />
             </div>
           </div>
@@ -72,6 +87,8 @@ function App() {
         <Route path="/team" element={<Team />} />
         <Route path="/admin" element={<AdminRoute />} />
       </Routes>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
