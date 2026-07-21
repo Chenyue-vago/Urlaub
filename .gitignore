@@ -5,3 +5,4 @@ dist/
 .vite/
 packages/web/src/data/
 packages/api/.env
+packages/web/.env
