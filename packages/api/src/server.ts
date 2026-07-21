@@ -2,11 +2,19 @@ import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import { env } from "./env.js";
 import { registerErrorHandler } from "./lib/errors.js";
+import { ClerkAuthenticator } from "./auth/clerk.js";
+import type { Authenticator } from "./auth/types.js";
 
-export function buildServer(): FastifyInstance {
+export interface BuildServerOptions {
+  authenticator?: Authenticator;
+}
+
+export function buildServer(opts: BuildServerOptions = {}): FastifyInstance {
   const app = Fastify({ logger: false });
 
   app.register(cors, { origin: env.WEB_ORIGIN });
+
+  app.decorate("authenticator", opts.authenticator ?? new ClerkAuthenticator());
 
   registerErrorHandler(app);
 
