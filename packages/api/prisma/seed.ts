@@ -1,5 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 
+// Intentionally its own PrismaClient, not the app's singleton from src/db.ts:
+// this script is a standalone CLI entry point (run via `prisma db seed`), not
+// part of the running server process, so it has no reason to share the
+// app's connection lifecycle.
 const prisma = new PrismaClient();
 
 async function main() {

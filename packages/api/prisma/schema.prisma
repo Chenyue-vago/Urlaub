@@ -44,6 +44,14 @@ model User {
 
 model LeaveRequest {
   id            String      @id @default(uuid())
+  // groupId is a UUID the application always generates and sets on insert —
+  // there is NO database default for it. A single-year vacation request is a
+  // group of one row; a request that spans a year boundary is split into
+  // multiple LeaveRequest rows (one per calendar year) that all share the
+  // same groupId. Approve / reject / cancel decisions act on the whole
+  // group at once (every row sharing that groupId), never on one segment in
+  // isolation. Do not treat groupId as optional or derive it from anything
+  // else — the application is the sole source of truth for this value.
   groupId       String      @map("group_id")
   userId        String      @map("user_id")
   user          User        @relation("user_leave_requests", fields: [userId], references: [id])

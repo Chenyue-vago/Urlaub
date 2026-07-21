@@ -12,6 +12,9 @@ export class AppError extends Error {
   }
 }
 
+// `code` doubles as the i18n key the frontend uses to look up a localized
+// message (spec §11), so defaulting `message` to `code` here is intentional —
+// callers that only pass a code still get a usable (if untranslated) message.
 export function badRequest(code: string, message = code): AppError {
   return new AppError(message, code, 400);
 }
