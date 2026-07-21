@@ -4,6 +4,7 @@ import {
   calculateYearlyStats,
   calculateCarryOver,
   countWorkDaysByYear,
+  isWithinCarryOverPeriod,
 } from '../src/entitlement.js';
 import { DEFAULT_ENTITLEMENT, EntitlementConfig, VacationRecord } from '../src/types.js';
 
@@ -96,6 +97,21 @@ describe('calculateYearlyStats', () => {
     ];
     const stats = calculateYearlyStats(records, 2026, 4, undefined, config);
     expect(stats.carryOverUsed).toBe(2);
+  });
+});
+
+describe('isWithinCarryOverPeriod', () => {
+  it('uses the default 03-31 deadline when no config is given', () => {
+    expect(isWithinCarryOverPeriod(2025, new Date(2026, 2, 31))).toBe(true);
+    expect(isWithinCarryOverPeriod(2025, new Date(2026, 3, 1))).toBe(false);
+  });
+
+  it('respects a custom carry-over deadline from config', () => {
+    const config: EntitlementConfig = { ...DEFAULT_ENTITLEMENT, carryOverDeadline: '06-30' };
+    // 04-01 would already be past the default 03-31 deadline, but is still
+    // within a custom 06-30 deadline.
+    expect(isWithinCarryOverPeriod(2025, new Date(2026, 3, 1), config)).toBe(true);
+    expect(isWithinCarryOverPeriod(2025, new Date(2026, 6, 1), config)).toBe(false);
   });
 });
 

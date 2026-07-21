@@ -186,10 +186,14 @@ export function calculateYearlyStats(
   };
 }
 
-// 检查某个日期是否在结转有效期内（法定假期可结转15个月）
-export function isWithinCarryOverPeriod(originalYear: number, currentDate: Date): boolean {
-  // 法定假期可以结转到下一年的3月31日
-  const carryOverDeadline = new Date(originalYear + 1, 2, 31); // 3月31日
+// 检查某个日期是否在结转有效期内（法定假期可结转到 config.carryOverDeadline，默认次年3月31日）
+export function isWithinCarryOverPeriod(
+  originalYear: number,
+  currentDate: Date,
+  config: EntitlementConfig = DEFAULT_ENTITLEMENT
+): boolean {
+  const [month, day] = config.carryOverDeadline.split('-').map(Number);
+  const carryOverDeadline = new Date(originalYear + 1, month - 1, day);
   return currentDate <= carryOverDeadline;
 }
 
