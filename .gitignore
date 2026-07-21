@@ -4,3 +4,4 @@ dist/
 *.log
 .vite/
 packages/web/src/data/
+packages/api/.env
