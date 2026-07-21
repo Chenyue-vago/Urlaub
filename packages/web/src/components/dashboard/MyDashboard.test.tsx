@@ -1,10 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ApiError } from "../../lib/api";
 import { LanguageProvider } from "../../i18n";
 import { ToastProvider } from "../Toast";
+import { queryClient } from "../../queryClient";
 import { MyDashboard } from "./MyDashboard";
 
 vi.mock("../../hooks/useApi", () => ({
@@ -61,9 +62,7 @@ const balanceResponse = {
 };
 
 function renderDashboard() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  queryClient.clear();
   return render(
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
@@ -121,6 +120,10 @@ describe("request → status flow", () => {
     await user.click(screen.getByText("Submit"));
 
     await waitFor(() => expect(createLeaveRequest).toHaveBeenCalled());
+
+    await waitFor(() => {
+      expect(listLeaveRequests.mock.calls.length).toBeGreaterThan(1);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId("status-badge")).toHaveTextContent("Pending");

@@ -111,6 +111,84 @@ body {
   flex-wrap: wrap;
 }
 
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-links a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.nav-links a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.status-pending {
+  background: #fff3cd;
+  color: #8a6d1a;
+}
+
+.status-approved {
+  background: #d4edda;
+  color: #256029;
+}
+
+.status-rejected {
+  background: #f8d7da;
+  color: #a12631;
+}
+
+.status-cancelled {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-muted);
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 1000;
+}
+
+.toast {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.toast-error {
+  background: #c0392b;
+}
+
+.toast-success {
+  background: #27ae60;
+}
+
+.toast-info {
+  background: #2d3e50;
+}
+
 .header-select {
   display: inline-flex;
   align-items: center;
