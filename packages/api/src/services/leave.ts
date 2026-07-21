@@ -49,75 +49,92 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
   }
 
   const groupId = randomUUID();
-  const now = new Date();
   const status = isAdmin ? "approved" : "pending";
 
-  let created: LeaveRequest[];
-  try {
-    created = await prisma.$transaction(
+  const runReservation = () =>
+    prisma.$transaction(
       async (tx) => {
-      const rows: LeaveRequest[] = [];
-      for (const seg of segments) {
-        if (seg.days <= 0) continue;
+        const rows: LeaveRequest[] = [];
+        const now = new Date();
+        for (const seg of segments) {
+          if (seg.days <= 0) continue;
 
-        // Reservation check against the SAME tx client so the read + insert
-        // are atomic (Serializable turns the read into a predicate lock).
-        const balance = await getBalance(tx, targetUserId, seg.year);
-        const bucket = type === "statutory" ? balance.statutory : balance.contractual;
-        if (seg.days > bucket.available) {
-          throw conflict("insufficient_balance");
+          // Reservation check against the SAME tx client so the read + insert
+          // are atomic (Serializable turns the read into a predicate lock).
+          const balance = await getBalance(tx, targetUserId, seg.year);
+          const bucket = type === "statutory" ? balance.statutory : balance.contractual;
+          if (seg.days > bucket.available) {
+            throw conflict("insufficient_balance");
+          }
+
+          const row = await tx.leaveRequest.create({
+            data: {
+              groupId,
+              userId: targetUserId,
+              startDate: toDate(seg.startDate),
+              endDate: toDate(seg.endDate),
+              workDays: new Prisma.Decimal(seg.days),
+              type,
+              year: seg.year,
+              status,
+              reason,
+              decidedById: isAdmin ? actor.id : null,
+              decidedAt: isAdmin ? now : null,
+            },
+          });
+          rows.push(row);
         }
 
-        const row = await tx.leaveRequest.create({
+        await tx.auditLog.create({
           data: {
-            groupId,
-            userId: targetUserId,
-            startDate: toDate(seg.startDate),
-            endDate: toDate(seg.endDate),
-            workDays: new Prisma.Decimal(seg.days),
-            type,
-            year: seg.year,
-            status,
-            reason,
-            decidedById: isAdmin ? actor.id : null,
-            decidedAt: isAdmin ? now : null,
+            actorId: actor.id,
+            action: isAdmin ? "record_leave" : "create_leave",
+            targetType: "leave_group",
+            targetId: groupId,
+            metadata: {
+              targetUserId,
+              type,
+              startDate,
+              endDate,
+              years: rows.map((r) => r.year),
+              totalWorkDays: rows.reduce((sum, r) => sum + Number(r.workDays), 0),
+            },
           },
         });
-        rows.push(row);
-      }
-
-      await tx.auditLog.create({
-        data: {
-          actorId: actor.id,
-          action: isAdmin ? "record_leave" : "create_leave",
-          targetType: "leave_group",
-          targetId: groupId,
-          metadata: {
-            targetUserId,
-            type,
-            startDate,
-            endDate,
-            years: rows.map((r) => r.year),
-            totalWorkDays: rows.reduce((sum, r) => sum + Number(r.workDays), 0),
-          },
-        },
-      });
 
         return rows;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        timeout: 10000,
+        maxWait: 5000,
+      }
     );
-  } catch (err) {
-    // Serializable can abort the losing side of a concurrent reservation with
-    // a write-conflict (P2034). Surface it as a clean 409 instead of a 500 so
-    // the caller can safely retry; the balance guarantee is never violated.
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
-      throw conflict("concurrent_request");
-    }
-    throw err;
-  }
 
-  return created;
+  // Serializable aborts the losing side of a concurrent reservation with a
+  // write-conflict (P2034). That is transient: retrying re-reads balance in a
+  // fresh transaction whose snapshot now sees the winner's committed row, so
+  // requests that genuinely fit still succeed. Only after exhausting retries do
+  // we surface a clean 409 (never a raw 500, never an over-allocation).
+  //
+  // MAX_ATTEMPTS must exceed the expected concurrent contention: with N
+  // simultaneous requests on the same user+year, a single request may lose up
+  // to N-1 races before it is the last one standing, so 3 is too few for
+  // realistic bursts. Exponential backoff with full jitter de-synchronizes the
+  // retrying herd so they don't just re-collide.
+  const MAX_ATTEMPTS = 6;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await runReservation();
+    } catch (err) {
+      const isConflict =
+        err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
+      if (!isConflict) throw err;
+      if (attempt >= MAX_ATTEMPTS) throw conflict("concurrent_request");
+      const backoffMs = Math.floor(Math.random() * (10 * 2 ** attempt)); // full jitter
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
 }
 
 export interface DecideLeaveInput {
@@ -142,14 +159,16 @@ export async function decideLeave(input: DecideLeaveInput): Promise<LeaveRequest
   return prisma.$transaction(async (tx) => {
     const rows = await tx.leaveRequest.findMany({ where: { groupId } });
     if (rows.length === 0) throw notFound("leave_not_found");
-    if (rows.some((r) => r.status !== "pending")) {
-      throw conflict("invalid_transition");
-    }
 
-    await tx.leaveRequest.updateMany({
-      where: { groupId },
+    // The conditional updateMany IS the guard: only rows still `pending`
+    // transition. Under two simultaneous approvals, exactly one gets
+    // count > 0; the other sees count === 0 and fails — so no double write and
+    // no double audit row.
+    const { count } = await tx.leaveRequest.updateMany({
+      where: { groupId, status: "pending" },
       data: { status: newStatus, decidedById: actor.id, decidedAt: now, decisionNote: note ?? null },
     });
+    if (count === 0) throw conflict("invalid_transition");
 
     await tx.auditLog.create({
       data: {
@@ -186,10 +205,6 @@ export async function cancelLeave(input: CancelLeaveInput): Promise<LeaveRequest
     const ownerId = rows[0].userId;
     if (!isAdmin && ownerId !== actor.id) throw forbidden("forbidden");
 
-    if (rows.some((r) => r.status !== "pending" && r.status !== "approved")) {
-      throw conflict("invalid_transition");
-    }
-
     if (!isAdmin) {
       // Members can only cancel leave that has not fully ended yet.
       const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
@@ -197,7 +212,14 @@ export async function cancelLeave(input: CancelLeaveInput): Promise<LeaveRequest
       if (latestEnd < today) throw conflict("invalid_transition");
     }
 
-    await tx.leaveRequest.updateMany({ where: { groupId }, data: { status: "cancelled" } });
+    // The conditional updateMany IS the guard: only pending/approved rows
+    // transition to cancelled. Concurrent cancels can't double-write or emit a
+    // second audit row — the loser sees count === 0.
+    const { count } = await tx.leaveRequest.updateMany({
+      where: { groupId, status: { in: ["pending", "approved"] } },
+      data: { status: "cancelled" },
+    });
+    if (count === 0) throw conflict("invalid_transition");
 
     await tx.auditLog.create({
       data: {

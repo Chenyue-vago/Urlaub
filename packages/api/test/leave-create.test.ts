@@ -116,6 +116,33 @@ describe("createLeave", () => {
     ).rejects.toBeInstanceOf(AppError);
   });
 
+  it("concurrency: parallel requests that ALL fit → all succeed (retry absorbs conflicts)", async () => {
+    // Default 20 statutory days; four disjoint 2-day requests = 8 ≤ 20.
+    const user = await makeUser({ employmentStartDate: "2025-01-01" });
+
+    const mk = (start: string, end: string) =>
+      createLeave({
+        actor: { id: user.id, role: "member" },
+        startDate: start,
+        endDate: end,
+        type: "statutory",
+        reason: "all-fit",
+      });
+
+    const results = await Promise.allSettled([
+      mk("2025-03-04", "2025-03-05"),
+      mk("2025-03-11", "2025-03-12"),
+      mk("2025-03-18", "2025-03-19"),
+      mk("2025-03-25", "2025-03-26"),
+    ]);
+
+    expect(results.every((r) => r.status === "fulfilled")).toBe(true);
+
+    const bal = await getBalance(prisma, user.id, 2025);
+    expect(bal.statutory.used).toBe(8);
+    expect(await prisma.leaveRequest.count()).toBe(4);
+  });
+
   it("concurrency: two parallel requests that together exceed balance → exactly one succeeds", async () => {
     await makeSettings({ statutoryDays: 3 });
     const user = await makeUser({ employmentStartDate: "2025-01-01" });

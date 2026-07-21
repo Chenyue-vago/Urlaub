@@ -19,3 +19,9 @@ Project guidance for Claude Code working in this repo.
       prebuild step — it regenerates an unused
       `packages/web/src/data/de-holidays.json`; the committed copy in
       `packages/shared/src/data/` is the source of truth now.
+- [ ] Expose half-day vacation on the createLeave path (schema + getBalance
+      already support Decimal 0.5; `CreateLeaveInput`/`countWorkDaysByYear`
+      currently only produce whole days — needs input + UI design in a later
+      milestone).
+- [ ] Enforce a required `decision_note` on reject at the M5 route layer
+      (spec §7); the service currently accepts an optional note.
