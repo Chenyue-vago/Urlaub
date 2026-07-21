@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollText } from 'lucide-react';
 import { useTranslation } from '../../i18n';
-import { useAuditLog } from '../../hooks/useAdmin';
+import { useAdminUsers, useAuditLog } from '../../hooks/useAdmin';
 
 const PAGE_SIZE = 20;
 
@@ -10,6 +10,15 @@ export function AuditLog() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [pages, setPages] = useState<{ actorId: string; action: string; createdAt: string; id: string }[][]>([]);
   const auditLog = useAuditLog({ limit: PAGE_SIZE, cursor });
+  const adminUsers = useAdminUsers();
+
+  const nameByUserId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const user of adminUsers.data ?? []) {
+      map.set(user.id, user.displayName || user.email);
+    }
+    return map;
+  }, [adminUsers.data]);
 
   const allItems = pages.flat().concat(auditLog.data?.items ?? []);
   const seen = new Set<string>();
@@ -55,7 +64,7 @@ export function AuditLog() {
           <div className="admin-audit-list">
             {items.map((item) => (
               <div key={item.id} className="admin-audit-row">
-                <span className="admin-audit-actor">{item.actorId}</span>
+                <span className="admin-audit-actor">{nameByUserId.get(item.actorId) ?? item.actorId}</span>
                 <span className="admin-audit-action">{item.action}</span>
                 <span className="admin-audit-time">{new Date(item.createdAt).toLocaleString()}</span>
               </div>

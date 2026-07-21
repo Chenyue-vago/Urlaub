@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "../../i18n";
@@ -81,10 +81,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   listLeaveRequests.mockResolvedValue([pendingRecord]);
   listUsers.mockResolvedValue([adminUser]);
-});
-
-afterEach(() => {
-  cleanup();
 });
 
 describe("ApprovalsQueue", () => {

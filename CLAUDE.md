@@ -33,3 +33,5 @@ Project guidance for Claude Code working in this repo.
 - [ ] Make `resolveUser` upsert race-safe: catch Prisma P2002 on the create
       branch (concurrent first-time login of the same clerkId) and re-fetch,
       instead of surfacing a 500.
+- [ ] Replace the reject-note window.prompt in ApprovalsQueue with a proper
+      modal/textarea (better UX + a11y).
