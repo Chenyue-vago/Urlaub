@@ -102,6 +102,39 @@ const zh: Dict = {
   'rules.expiryBodyStatutoryDesc': '：如因病无法休假，可结转至次年3月31日（15个月）',
   'rules.leaveTitle': '离职规则',
   'rules.leaveBody': '下半年离职时，假期按月份比例计算（不低于法定最低假期）；剩余假期需在离职期内休完，合同额外假期在离职时失效',
+
+  'nav.home': '我的假期',
+  'nav.team': '团队日历',
+  'nav.admin': '管理',
+
+  'status.pending': '待审批',
+  'status.approved': '已批准',
+  'status.rejected': '已拒绝',
+  'status.cancelled': '已取消',
+
+  'type.statutory': '法定假期',
+  'type.contractual': '合同假期',
+
+  'dashboard.requestVacation': '申请假期',
+  'dashboard.cancelRequest': '取消申请',
+  'dashboard.confirmCancel': '确定要取消这条申请吗？',
+  'dashboard.reasonLabel': '理由（可选）',
+  'dashboard.typeLabel': '假期类型',
+  'dashboard.submit': '提交',
+  'dashboard.carryOverLabel': '结转',
+
+  'team.comingSoon': '团队日历 — 即将上线 (M7b)',
+  'admin.comingSoon': '管理 — 即将上线 (M7b)',
+
+  'errors.insufficient_balance': '假期余额不足，无法提交此申请',
+  'errors.forbidden': '你没有权限执行此操作',
+  'errors.account_deactivated': '你的账号已被停用',
+  'errors.email_domain_not_allowed': '该邮箱域名不允许注册',
+  'errors.validation_error': '提交的信息有误，请检查后重试',
+  'errors.invalid_transition': '该请求当前状态不允许此操作',
+  'errors.last_admin': '不能移除最后一位管理员',
+  'errors.concurrent_request': '操作冲突，请刷新后重试',
+  'errors.generic': '发生错误，请重试',
 };
 
 const en: Dict = {
@@ -193,6 +226,39 @@ const en: Dict = {
   'rules.expiryBodyStatutoryDesc': ': if unused due to illness, can be carried to Mar 31 of the next year (15 months)',
   'rules.leaveTitle': 'On leaving the company',
   'rules.leaveBody': 'When leaving in the second half of the year, vacation is prorated (not below the statutory minimum); remaining days must be taken before the last day; contractual extras lapse on the leaving date.',
+
+  'nav.home': 'My Dashboard',
+  'nav.team': 'Team Timeline',
+  'nav.admin': 'Admin',
+
+  'status.pending': 'Pending',
+  'status.approved': 'Approved',
+  'status.rejected': 'Rejected',
+  'status.cancelled': 'Cancelled',
+
+  'type.statutory': 'Statutory',
+  'type.contractual': 'Contractual',
+
+  'dashboard.requestVacation': 'Request Vacation',
+  'dashboard.cancelRequest': 'Cancel request',
+  'dashboard.confirmCancel': 'Cancel this request?',
+  'dashboard.reasonLabel': 'Reason (optional)',
+  'dashboard.typeLabel': 'Vacation type',
+  'dashboard.submit': 'Submit',
+  'dashboard.carryOverLabel': 'Carry-over',
+
+  'team.comingSoon': 'Team Timeline — Coming soon (M7b)',
+  'admin.comingSoon': 'Admin — Coming soon (M7b)',
+
+  'errors.insufficient_balance': 'You do not have enough vacation balance for this request',
+  'errors.forbidden': 'You are not allowed to perform this action',
+  'errors.account_deactivated': 'Your account has been deactivated',
+  'errors.email_domain_not_allowed': 'This email domain is not allowed',
+  'errors.validation_error': 'The submitted data is invalid, please check and try again',
+  'errors.invalid_transition': 'This request cannot be changed from its current status',
+  'errors.last_admin': 'Cannot remove the last remaining admin',
+  'errors.concurrent_request': 'This conflicted with another change, please refresh and retry',
+  'errors.generic': 'Something went wrong, please try again',
 };
 
 const DICTS: Record<Locale, Dict> = { zh, en };
