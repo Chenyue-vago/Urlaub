@@ -4,6 +4,9 @@ Project guidance for Claude Code working in this repo.
 
 ## TODO
 
+- [ ] Make each Audit Log entry clickable: clicking an entry opens the full
+      underlying request/detail (e.g. the leave group for leave actions, the
+      user for user actions) rather than just showing the action label.
 - [ ] Add a PR-triggered CI workflow: run `npm test` + `npm run build` on
       `pull_request` events (currently CI only runs on push to `main`). This is
       required so the `main` branch-protection ruleset can gate merges on
