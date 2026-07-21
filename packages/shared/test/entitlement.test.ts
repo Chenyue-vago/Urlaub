@@ -3,6 +3,7 @@ import {
   getYearlyEntitlement,
   calculateYearlyStats,
   calculateCarryOver,
+  countWorkDays,
   countWorkDaysByYear,
   isWithinCarryOverPeriod,
 } from '../src/entitlement.js';
@@ -37,6 +38,32 @@ describe('countWorkDaysByYear', () => {
   it('returns a single segment when start/end are in the same year', () => {
     const segs = countWorkDaysByYear('2026-06-01', '2026-06-05', 'BW');
     expect(segs.map(s => s.year)).toEqual([2026]);
+  });
+});
+
+describe('countWorkDays / public holiday exclusion', () => {
+  it('excludes a fixed-date public holiday that falls on a weekday (Tag der Deutschen Einheit, 2025-10-03 is a Friday)', () => {
+    // 2025-09-29 (Mon) .. 2025-10-03 (Fri): 5 calendar weekdays, no weekend in
+    // between, but Oct 3 is a BW public holiday, so only 4 should count.
+    const plainWeekdays = 5;
+    const days = countWorkDays('2025-09-29', '2025-10-03', 'BW');
+    expect(days).toBe(plainWeekdays - 1);
+    expect(days).toBe(4);
+  });
+
+  it('excludes a fixed-date public holiday across a year boundary (New Year\'s Day, 2026-01-01 is a Thursday)', () => {
+    // 2025-12-30 (Tue) .. 2026-01-02 (Fri): 4 calendar weekdays, no weekend in
+    // between, but Jan 1 is a public holiday everywhere, so only 3 should count.
+    const plainWeekdays = 4;
+    const days = countWorkDays('2025-12-30', '2026-01-02', 'BW');
+    expect(days).toBe(plainWeekdays - 1);
+    expect(days).toBe(3);
+
+    const segs = countWorkDaysByYear('2025-12-30', '2026-01-02', 'BW');
+    expect(segs.map(s => s.year)).toEqual([2025, 2026]);
+    // 2025-12-30, 2025-12-31 both count; 2026-01-01 (holiday) excluded, 2026-01-02 counts.
+    expect(segs.find(s => s.year === 2025)!.days).toBe(2);
+    expect(segs.find(s => s.year === 2026)!.days).toBe(1);
   });
 });
 
