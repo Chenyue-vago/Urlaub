@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from '../i18n';
 import { useCalendar } from '../hooks/useCalendar';
-import { TeamTimeline } from '../components/timeline/TeamTimeline';
+import { TeamCalendar } from '../components/team/TeamCalendar';
 import { formatDisplayDate } from '../utils';
 
 function monthRange(year: number, month: number): { from: string; to: string } {
@@ -72,7 +72,7 @@ export function Team() {
           </button>
         </div>
       ) : (
-        <TeamTimeline entries={calendar.data ?? []} rangeStart={from} rangeEnd={to} />
+        <TeamCalendar entries={calendar.data ?? []} year={cursor.year} month={cursor.month} />
       )}
     </main>
   );

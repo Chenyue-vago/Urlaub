@@ -2050,3 +2050,94 @@ body {
     grid-template-columns: 6rem 1fr;
   }
 }
+
+/* ── Team calendar (month overview: who is on leave, and when) ─────────── */
+.team-calendar {
+  margin-top: 1rem;
+}
+.team-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.team-calendar-weekdays {
+  margin-bottom: 6px;
+}
+.team-calendar-weekday {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted, #6b7280);
+  padding: 4px 0;
+}
+.team-calendar-weekday--weekend {
+  color: #b45309;
+}
+.team-calendar-cell {
+  position: relative;
+  min-height: 92px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 10px;
+  padding: 6px;
+  background: var(--color-surface, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.team-calendar-cell:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.team-calendar-cell--blank {
+  border: none;
+  background: transparent;
+}
+.team-calendar-cell--weekend {
+  background: #faf7ee;
+}
+.team-calendar-cell--today {
+  border-color: #2f6b4f;
+  box-shadow: 0 0 0 2px rgba(47, 107, 79, 0.35);
+}
+.team-calendar-daynum {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-muted, #6b7280);
+}
+.team-calendar-cell--today .team-calendar-daynum {
+  color: #2f6b4f;
+}
+.team-calendar-people {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.team-calendar-chip {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #2f6b4f;
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.team-calendar-chip--more {
+  background: #6b7280;
+}
+@media (max-width: 640px) {
+  .team-calendar-cell {
+    min-height: 64px;
+    padding: 4px;
+  }
+  .team-calendar-chip {
+    font-size: 0.62rem;
+    padding: 1px 6px;
+  }
+}
