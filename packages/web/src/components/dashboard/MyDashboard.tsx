@@ -13,6 +13,7 @@ import { useToast } from '../Toast';
 import { translateApiErrorCode } from '../../lib/errorMessages';
 import { ApiError } from '../../lib/api';
 import { StatsCards } from './StatsCards';
+import { PublicHolidays } from './PublicHolidays';
 import { RecordList } from './RecordList';
 import { RecordModal } from './RecordModal';
 import { WelcomeModal } from './WelcomeModal';
@@ -142,6 +143,8 @@ export function MyDashboard() {
           cancellingId={cancellingId}
         />
       )}
+
+      <PublicHolidays year={selectedYear} region={region} />
 
       {showAddForm && (
         <RecordModal
