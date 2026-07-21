@@ -28,7 +28,8 @@ describe("GET /calendar", () => {
       expect(row).not.toHaveProperty("reason");
       expect(row).not.toHaveProperty("decisionNote");
       expect(row.status).toBe("approved");
-      expect(row.displayName).toBe("Carol");
+      expect(row.userDisplayName).toBe("Carol");
+      expect(typeof row.id).toBe("string");
     }
   });
 

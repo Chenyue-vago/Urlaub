@@ -1,18 +1,11 @@
+import type { MeDTO, UserRole as SharedUserRole } from "@urlaub/shared";
 import type { Api } from "../lib/api";
 
-export type UserRole = "admin" | "member";
+export type UserRole = SharedUserRole;
 
-export interface MeResponse {
-  id: string;
-  clerkId: string;
-  email: string;
-  displayName: string | null;
-  role: UserRole;
-  region: string;
-  employmentStartDate: string | null;
-  isActive: boolean;
-  createdAt: string;
-}
+// The HTTP contract lives in @urlaub/shared so producer (API) and consumer
+// (this client) can't drift apart silently.
+export type MeResponse = MeDTO;
 
 export interface UpdateMePayload {
   region?: string;

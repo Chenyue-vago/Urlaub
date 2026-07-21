@@ -179,8 +179,8 @@ describe("admin routes", () => {
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.rows).toHaveLength(1);
-    expect(body.rows[0].metadata.statutoryDays).toBe(23);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].metadata.statutoryDays).toBe(23);
     expect(body.nextCursor).toBeTruthy();
   });
 });

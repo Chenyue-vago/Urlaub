@@ -1,6 +1,8 @@
 import type { LeaveRequest } from "@prisma/client";
+import type { CalendarEntryDTO } from "@urlaub/shared";
 import { prisma } from "../db.js";
 import { getBalance } from "./balance.js";
+import { toCalendarEntryDTO } from "../lib/serialize.js";
 import type { Db } from "./record.js";
 
 /** List leave requests, optionally scoped to a single user and/or year. */
@@ -30,21 +32,12 @@ export async function getLeaveGroupByRowId(
   return { row, group };
 }
 
-export interface CalendarEntry {
-  userId: string;
-  displayName: string | null;
-  startDate: Date;
-  endDate: Date;
-  type: string;
-  status: "approved";
-}
-
 /**
  * Approved leave for ALL users overlapping [from, to]. Deliberately excludes
  * `reason`/`decisionNote` — this is a team-visible timeline, not the detail
  * view.
  */
-export async function listCalendar(from: Date, to: Date): Promise<CalendarEntry[]> {
+export async function listCalendar(from: Date, to: Date): Promise<CalendarEntryDTO[]> {
   const rows = await prisma.leaveRequest.findMany({
     where: {
       status: "approved",
@@ -55,14 +48,7 @@ export async function listCalendar(from: Date, to: Date): Promise<CalendarEntry[
     orderBy: { startDate: "asc" },
   });
 
-  return rows.map((row) => ({
-    userId: row.userId,
-    displayName: row.user.displayName,
-    startDate: row.startDate,
-    endDate: row.endDate,
-    type: row.type,
-    status: "approved" as const,
-  }));
+  return rows.map(toCalendarEntryDTO);
 }
 
 /** Count active admins — used by the last-admin guard. */

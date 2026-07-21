@@ -1,26 +1,10 @@
-import type { VacationType } from "@urlaub/shared";
+import type { VacationType, LeaveRequestDTO, LeaveStatus as SharedLeaveStatus } from "@urlaub/shared";
 import type { Api } from "../lib/api";
 
-export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
+export type LeaveStatus = SharedLeaveStatus;
 
-export interface LeaveRequestResponse {
-  id: string;
-  groupId: string;
-  userId: string;
-  startDate: string;
-  endDate: string;
-  workDays: number;
-  type: VacationType;
-  year: number;
-  isCarryOver: boolean;
-  status: LeaveStatus;
-  reason: string;
-  decidedById: string | null;
-  decidedAt: string | null;
-  decisionNote: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+// HTTP contract shared with the API (see @urlaub/shared/contracts).
+export type LeaveRequestResponse = LeaveRequestDTO;
 
 export interface ListLeaveRequestsParams {
   year?: number;

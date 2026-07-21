@@ -1,16 +1,8 @@
-import type { VacationType } from "@urlaub/shared";
+import type { CalendarEntryDTO } from "@urlaub/shared";
 import type { Api } from "../lib/api";
-import type { LeaveStatus } from "./leave";
 
-export interface CalendarEntry {
-  id: string;
-  userId: string;
-  userDisplayName: string | null;
-  startDate: string;
-  endDate: string;
-  type: VacationType;
-  status: LeaveStatus;
-}
+// HTTP contract shared with the API (see @urlaub/shared/contracts).
+export type CalendarEntry = CalendarEntryDTO;
 
 export interface GetCalendarParams {
   from: string;

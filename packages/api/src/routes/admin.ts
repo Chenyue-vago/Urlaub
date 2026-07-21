@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireAuth, requireAdmin } from "../auth/context.js";
 import { AppError, badRequest, notFound } from "../lib/errors.js";
 import { prisma } from "../db.js";
+import type { AuditLogPageDTO } from "@urlaub/shared";
+import { toAuditLogEntryDTO } from "../lib/serialize.js";
 import {
   countActiveAdmins,
   listAuditLog,
@@ -159,7 +161,11 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       if (!parsed.success) throw badRequest("validation_error", parsed.error.message);
       const { limit = 50, cursor } = parsed.data;
       const { rows, nextCursor } = await listAuditLog({ limit, cursor });
-      return { rows, nextCursor };
+      const page: AuditLogPageDTO = {
+        items: rows.map(toAuditLogEntryDTO),
+        nextCursor: nextCursor ?? null,
+      };
+      return page;
     }
   );
 }

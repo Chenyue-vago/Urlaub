@@ -1,4 +1,4 @@
-import type { EntitlementConfig } from "@urlaub/shared";
+import type { EntitlementConfig, AuditLogEntryDTO, AuditLogPageDTO } from "@urlaub/shared";
 import type { Api } from "../lib/api";
 import type { UserRole } from "./me";
 
@@ -30,25 +30,15 @@ export interface UpdateSettingsPayload {
   carryOverDeadline?: string;
 }
 
-export interface AuditLogEntry {
-  id: string;
-  actorId: string;
-  action: string;
-  targetType: string | null;
-  targetId: string | null;
-  metadata: Record<string, unknown> | null;
-  createdAt: string;
-}
+export type AuditLogEntry = AuditLogEntryDTO;
 
 export interface AuditLogParams {
   limit?: number;
   cursor?: string;
 }
 
-export interface AuditLogResponse {
-  items: AuditLogEntry[];
-  nextCursor?: string | null;
-}
+// HTTP contract shared with the API (see @urlaub/shared/contracts).
+export type AuditLogResponse = AuditLogPageDTO;
 
 export function listUsers(api: Api): Promise<AdminUser[]> {
   return api.apiFetch<AdminUser[]>("/admin/users");

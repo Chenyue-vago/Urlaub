@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth } from "../auth/context.js";
 import { badRequest } from "../lib/errors.js";
+import { toMeDTO } from "../lib/serialize.js";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -16,7 +17,7 @@ const patchMeSchema = z.object({
 
 export async function meRoutes(app: FastifyInstance): Promise<void> {
   app.get("/me", { preHandler: requireAuth }, async (req) => {
-    return req.user;
+    return toMeDTO(req.user!);
   });
 
   app.patch("/me", { preHandler: requireAuth }, async (req) => {
@@ -40,6 +41,6 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
       },
     });
 
-    return updated;
+    return toMeDTO(updated);
   });
 }

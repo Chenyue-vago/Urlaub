@@ -4,6 +4,7 @@ import { requireAuth, requireAdmin } from "../auth/context.js";
 import { badRequest, forbidden, notFound } from "../lib/errors.js";
 import { createLeave, cancelLeave, decideLeave } from "../services/leave.js";
 import { listLeaveRequests, getLeaveGroupByRowId } from "../services/queries.js";
+import { toLeaveRequestDTO } from "../lib/serialize.js";
 
 const listQuerySchema = z.object({
   year: z.coerce.number().int().optional(),
@@ -29,7 +30,8 @@ export async function leaveRoutes(app: FastifyInstance): Promise<void> {
     const { year, userId } = parsed.data;
 
     const targetUserId = req.user!.role === "admin" ? userId : req.user!.id;
-    return listLeaveRequests({ userId: targetUserId, year });
+    const rows = await listLeaveRequests({ userId: targetUserId, year });
+    return rows.map(toLeaveRequestDTO);
   });
 
   app.post("/leave-requests", { preHandler: requireAuth }, async (req, reply) => {
@@ -52,7 +54,7 @@ export async function leaveRoutes(app: FastifyInstance): Promise<void> {
       reason,
     });
     reply.status(201);
-    return rows;
+    return rows.map(toLeaveRequestDTO);
   });
 
   app.get("/leave-requests/:id", { preHandler: requireAuth }, async (req) => {
@@ -63,17 +65,18 @@ export async function leaveRoutes(app: FastifyInstance): Promise<void> {
     if (req.user!.role !== "admin" && row.userId !== req.user!.id) {
       throw forbidden();
     }
-    return { ...row, group };
+    return { ...toLeaveRequestDTO(row), group: group.map(toLeaveRequestDTO) };
   });
 
   app.post("/leave-requests/:id/cancel", { preHandler: requireAuth }, async (req) => {
     const { id } = req.params as { id: string };
     const found = await getLeaveGroupByRowId(id);
     if (!found) throw notFound("leave_not_found");
-    return cancelLeave({
+    const rows = await cancelLeave({
       actor: { id: req.user!.id, role: req.user!.role },
       groupId: found.row.groupId,
     });
+    return rows.map(toLeaveRequestDTO);
   });
 
   app.post(
@@ -83,11 +86,12 @@ export async function leaveRoutes(app: FastifyInstance): Promise<void> {
       const { id } = req.params as { id: string };
       const found = await getLeaveGroupByRowId(id);
       if (!found) throw notFound("leave_not_found");
-      return decideLeave({
+      const rows = await decideLeave({
         actor: { id: req.user!.id, role: req.user!.role },
         groupId: found.row.groupId,
         action: "approve",
       });
+      return rows.map(toLeaveRequestDTO);
     }
   );
 
@@ -100,12 +104,13 @@ export async function leaveRoutes(app: FastifyInstance): Promise<void> {
       const { id } = req.params as { id: string };
       const found = await getLeaveGroupByRowId(id);
       if (!found) throw notFound("leave_not_found");
-      return decideLeave({
+      const rows = await decideLeave({
         actor: { id: req.user!.id, role: req.user!.role },
         groupId: found.row.groupId,
         action: "reject",
         note: parsed.data.note,
       });
+      return rows.map(toLeaveRequestDTO);
     }
   );
 }
