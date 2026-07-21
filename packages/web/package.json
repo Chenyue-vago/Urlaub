@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@urlaub/shared": "*",
     "date-fns": "^3.3.1",
     "date-holidays-parser": "^3.4.7",
     "lucide-react": "^0.312.0",
