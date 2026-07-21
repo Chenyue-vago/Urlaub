@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  member
+}
+
+enum LeaveType {
+  statutory
+  contractual
+}
+
+enum LeaveStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+model User {
+  id                  String    @id @default(uuid())
+  clerkId             String    @unique @map("clerk_id")
+  email               String    @unique
+  displayName         String?   @map("display_name")
+  role                Role      @default(member)
+  region              String    @default("BW")
+  employmentStartDate DateTime? @map("employment_start_date") @db.Date
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  leaveRequests LeaveRequest[] @relation("user_leave_requests")
+  decisions     LeaveRequest[] @relation("decisions")
+  auditLogs     AuditLog[]     @relation("audit_log_actor")
+
+  @@map("users")
+}
+
+model LeaveRequest {
+  id            String      @id @default(uuid())
+  groupId       String      @map("group_id")
+  userId        String      @map("user_id")
+  user          User        @relation("user_leave_requests", fields: [userId], references: [id])
+  startDate     DateTime    @map("start_date") @db.Date
+  endDate       DateTime    @map("end_date") @db.Date
+  workDays      Decimal     @map("work_days") @db.Decimal(4, 1)
+  type          LeaveType
+  year          Int
+  isCarryOver   Boolean     @default(false) @map("is_carry_over")
+  status        LeaveStatus @default(pending)
+  reason        String      @default("")
+  decidedById   String?     @map("decided_by_id")
+  decidedBy     User?       @relation("decisions", fields: [decidedById], references: [id])
+  decidedAt     DateTime?   @map("decided_at")
+  decisionNote  String?     @map("decision_note")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@index([userId, year])
+  @@index([status, startDate])
+  @@index([groupId])
+  @@map("leave_requests")
+}
+
+model AppSettings {
+  id                Int      @id @default(1)
+  statutoryDays     Int      @default(20) @map("statutory_days")
+  contractualDays   Int      @default(8) @map("contractual_days")
+  carryOverDeadline String   @default("03-31") @map("carry_over_deadline")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String   @map("actor_id")
+  actor      User     @relation("audit_log_actor", fields: [actorId], references: [id])
+  action     String
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("audit_log")
+}
