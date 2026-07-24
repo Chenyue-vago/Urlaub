@@ -50,7 +50,9 @@ function groupByGroupId(records: LeaveRequestResponse[]): ApprovalGroup[] {
 export function ApprovalsQueue() {
   const { t } = useTranslation();
   const { showError, showSuccess } = useToast();
-  const leaveRequests = useLeaveRequests({});
+  // Approvals span every user, so explicitly request the cross-user view.
+  // (Without userId, the API safely defaults to just the caller's own rows.)
+  const leaveRequests = useLeaveRequests({ userId: 'all' });
   const adminUsers = useAdminUsers();
   const approveMutation = useApproveLeaveRequest();
   const rejectMutation = useRejectLeaveRequest();

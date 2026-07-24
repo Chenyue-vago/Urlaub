@@ -12,13 +12,13 @@ describe("leave-requests routes", () => {
       method: "POST",
       url: "/leave-requests",
       headers: bearer(tokenFor(member)),
-      payload: { startDate: "2025-03-04", endDate: "2025-03-05", type: "statutory" },
+      payload: { startDate: "2025-03-04", endDate: "2025-03-05" },
     });
     await app.inject({
       method: "POST",
       url: "/leave-requests",
       headers: bearer(tokenFor(other)),
-      payload: { startDate: "2025-04-04", endDate: "2025-04-05", type: "statutory" },
+      payload: { startDate: "2025-04-04", endDate: "2025-04-05" },
     });
 
     const res = await app.inject({
@@ -41,7 +41,7 @@ describe("leave-requests routes", () => {
       method: "POST",
       url: "/leave-requests",
       headers: bearer(tokenFor(member)),
-      payload: { startDate: "2025-03-04", endDate: "2025-03-05", type: "statutory" },
+      payload: { startDate: "2025-03-04", endDate: "2025-03-05" },
     });
     expect(memberRes.statusCode).toBe(201);
     expect(memberRes.json()[0].status).toBe("pending");
@@ -53,7 +53,6 @@ describe("leave-requests routes", () => {
       payload: {
         startDate: "2025-05-05",
         endDate: "2025-05-06",
-        type: "statutory",
         userId: member.id,
       },
     });
@@ -71,7 +70,7 @@ describe("leave-requests routes", () => {
       method: "POST",
       url: "/leave-requests",
       headers: bearer(tokenFor(member)),
-      payload: { startDate: "2025-03-04", endDate: "2025-03-05", type: "statutory" },
+      payload: { startDate: "2025-03-04", endDate: "2025-03-05" },
     });
     const id = created.json()[0].id;
 
@@ -109,7 +108,7 @@ describe("leave-requests routes", () => {
       method: "POST",
       url: "/leave-requests",
       headers: bearer(tokenFor(owner)),
-      payload: { startDate: "2025-03-04", endDate: "2025-03-05", type: "statutory" },
+      payload: { startDate: "2025-03-04", endDate: "2025-03-05" },
     });
     const id = created.json()[0].id;
 
@@ -143,7 +142,7 @@ describe("leave-requests routes", () => {
       method: "POST",
       url: "/leave-requests",
       headers: bearer(tokenFor(member)),
-      payload: { startDate: "2099-03-04", endDate: "2099-03-05", type: "statutory" },
+      payload: { startDate: "2099-03-04", endDate: "2099-03-05" },
     });
     const id = created.json()[0].id;
     const cancelRes = await app.inject({

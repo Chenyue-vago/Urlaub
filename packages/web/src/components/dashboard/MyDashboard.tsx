@@ -60,7 +60,6 @@ export function MyDashboard() {
   const handleCreate = (payload: {
     startDate: string;
     endDate: string;
-    type: 'statutory' | 'contractual';
     reason?: string;
   }) => {
     createLeaveRequest.mutate(payload, {

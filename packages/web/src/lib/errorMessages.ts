@@ -9,6 +9,7 @@ const KNOWN_CODES = [
   'invalid_transition',
   'last_admin',
   'concurrent_request',
+  'overlapping_request',
 ] as const;
 
 type KnownErrorCode = (typeof KNOWN_CODES)[number];

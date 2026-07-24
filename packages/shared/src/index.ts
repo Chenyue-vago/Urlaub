@@ -4,3 +4,4 @@ export * from './dates.js';
 export * from './regions.js';
 export * from './holidays.js';
 export * from './entitlement.js';
+export * from './allocate.js';

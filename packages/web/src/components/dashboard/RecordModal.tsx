@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Info } from 'lucide-react';
-import { countWorkDaysByYear, type RegionCode, type VacationType } from '@urlaub/shared';
+import { countWorkDaysByYear, type RegionCode } from '@urlaub/shared';
 import { useTranslation } from '../../i18n';
 import { formatDisplayDate } from '../../utils';
 
@@ -9,7 +9,6 @@ interface RecordModalProps {
   onSubmit: (payload: {
     startDate: string;
     endDate: string;
-    type: VacationType;
     reason?: string;
   }) => void;
   onClose: () => void;
@@ -20,7 +19,6 @@ export function RecordModal({ region, onSubmit, onClose, submitting }: RecordMod
   const { t } = useTranslation();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [type, setType] = useState<VacationType>('statutory');
   const [reason, setReason] = useState('');
 
   const previewByYear =
@@ -76,25 +74,6 @@ export function RecordModal({ region, onSubmit, onClose, submitting }: RecordMod
           </div>
         )}
         <div className="form-group">
-          <label>{t('dashboard.typeLabel')}</label>
-          <div className="type-selector">
-            <button
-              type="button"
-              className={`type-btn statutory ${type === 'statutory' ? 'active' : ''}`}
-              onClick={() => setType('statutory')}
-            >
-              {t('type.statutory')}
-            </button>
-            <button
-              type="button"
-              className={`type-btn contractual ${type === 'contractual' ? 'active' : ''}`}
-              onClick={() => setType('contractual')}
-            >
-              {t('type.contractual')}
-            </button>
-          </div>
-        </div>
-        <div className="form-group">
           <label htmlFor="record-reason">{t('dashboard.reasonLabel')}</label>
           <input
             id="record-reason"
@@ -115,7 +94,6 @@ export function RecordModal({ region, onSubmit, onClose, submitting }: RecordMod
               onSubmit({
                 startDate,
                 endDate,
-                type,
                 reason: reason.trim() || undefined,
               })
             }

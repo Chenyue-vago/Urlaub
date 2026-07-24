@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { makeUser, prisma } from "./helpers/factories.js";
+import { makeSettings, makeUser, prisma } from "./helpers/factories.js";
 import { cancelLeave, createLeave, decideLeave } from "../src/services/leave.js";
 import { getBalance } from "../src/services/balance.js";
 import { AppError } from "../src/lib/errors.js";
 
+// These transition tests assert against the statutory bucket, so pin
+// contractualDays:0 to make auto-allocation draw purely from statutory.
 async function pendingGroup(userId: string, start = "2026-08-03", end = "2026-08-04") {
+  await makeSettings({ statutoryDays: 20, contractualDays: 0 });
   return createLeave({
     actor: { id: userId, role: "member" },
     startDate: start,
     endDate: end,
-    type: "statutory",
     reason: "trip",
   });
 }

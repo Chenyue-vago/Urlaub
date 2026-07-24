@@ -1,4 +1,4 @@
-import type { VacationType, LeaveRequestDTO, LeaveStatus as SharedLeaveStatus } from "@urlaub/shared";
+import type { LeaveRequestDTO, LeaveStatus as SharedLeaveStatus } from "@urlaub/shared";
 import type { Api } from "../lib/api";
 
 export type LeaveStatus = SharedLeaveStatus;
@@ -14,7 +14,6 @@ export interface ListLeaveRequestsParams {
 export interface CreateLeaveRequestPayload {
   startDate: string;
   endDate: string;
-  type: VacationType;
   reason?: string;
   userId?: string;
 }

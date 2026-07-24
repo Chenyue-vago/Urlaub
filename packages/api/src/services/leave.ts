@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { Prisma, type LeaveRequest, type LeaveType } from "@prisma/client";
-import { countWorkDaysByYear, type RegionCode } from "@urlaub/shared";
+import { Prisma, type LeaveRequest } from "@prisma/client";
+import { allocateLeaveDays, countWorkDaysByYear, type RegionCode } from "@urlaub/shared";
 import { prisma } from "../db.js";
 import { conflict, forbidden, notFound } from "../lib/errors.js";
-import { getBalance } from "./balance.js";
+import { getBalance, RESERVING_STATUSES } from "./balance.js";
+import { loadConfig } from "./record.js";
 
 export interface Actor {
   id: string;
@@ -16,7 +17,6 @@ export interface CreateLeaveInput {
   targetUserId?: string;
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
-  type: LeaveType;
   reason?: string;
 }
 
@@ -32,7 +32,7 @@ function toDate(dateStr: string): Date {
  * requests for themselves; admins record approved leave for anyone.
  */
 export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest[]> {
-  const { actor, startDate, endDate, type, reason = "" } = input;
+  const { actor, startDate, endDate, reason = "" } = input;
   const targetUserId = input.targetUserId ?? actor.id;
 
   const isAdmin = actor.role === "admin";
@@ -54,6 +54,27 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
   const runReservation = () =>
     prisma.$transaction(
       async (tx) => {
+        const config = await loadConfig(tx);
+
+        // Reject a request whose date range intersects an existing reserving
+        // (pending/approved) request for the SAME user — you cannot book the
+        // same day off twice. Two ranges overlap iff each starts on/before the
+        // other ends; @db.Date values are midnight, so a shared boundary day
+        // counts as an overlap. Rejected/cancelled rows freed their dates and
+        // are excluded. Under Serializable this SELECT is a predicate lock, so
+        // two concurrent overlapping requests can't both pass: the loser aborts
+        // (P2034) and, on retry, sees the winner's committed row.
+        const clash = await tx.leaveRequest.findFirst({
+          where: {
+            userId: targetUserId,
+            status: { in: [...RESERVING_STATUSES] },
+            startDate: { lte: toDate(endDate) },
+            endDate: { gte: toDate(startDate) },
+          },
+          select: { id: true },
+        });
+        if (clash) throw conflict("overlapping_request");
+
         const rows: LeaveRequest[] = [];
         const now = new Date();
         for (const seg of segments) {
@@ -61,28 +82,52 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
 
           // Reservation check against the SAME tx client so the read + insert
           // are atomic (Serializable turns the read into a predicate lock).
+          // The system auto-allocates the segment's days across buckets in the
+          // order best for the employee (soonest-to-expire first): carried-over
+          // statutory -> contractual -> base statutory. One segment may split
+          // into several rows of different type/isCarryOver.
           const balance = await getBalance(tx, targetUserId, seg.year);
-          const bucket = type === "statutory" ? balance.statutory : balance.contractual;
-          if (seg.days > bucket.available) {
+          // Split the statutory `available` into its perishable carry-over part
+          // (consumed first) and the base part.
+          const carryOverAvailable = Math.max(
+            0,
+            Math.min(balance.statutory.carryOver, balance.statutory.available)
+          );
+          const statutoryAvailable = Math.max(0, balance.statutory.available - carryOverAvailable);
+
+          const { allocations, shortfall } = allocateLeaveDays(
+            seg.days,
+            seg.endDate,
+            {
+              carryOverAvailable,
+              contractualAvailable: balance.contractual.available,
+              statutoryAvailable,
+            },
+            config
+          );
+          if (shortfall > 0) {
             throw conflict("insufficient_balance");
           }
 
-          const row = await tx.leaveRequest.create({
-            data: {
-              groupId,
-              userId: targetUserId,
-              startDate: toDate(seg.startDate),
-              endDate: toDate(seg.endDate),
-              workDays: new Prisma.Decimal(seg.days),
-              type,
-              year: seg.year,
-              status,
-              reason,
-              decidedById: isAdmin ? actor.id : null,
-              decidedAt: isAdmin ? now : null,
-            },
-          });
-          rows.push(row);
+          for (const alloc of allocations) {
+            const row = await tx.leaveRequest.create({
+              data: {
+                groupId,
+                userId: targetUserId,
+                startDate: toDate(seg.startDate),
+                endDate: toDate(seg.endDate),
+                workDays: new Prisma.Decimal(alloc.days),
+                type: alloc.type,
+                isCarryOver: alloc.isCarryOver,
+                year: seg.year,
+                status,
+                reason,
+                decidedById: isAdmin ? actor.id : null,
+                decidedAt: isAdmin ? now : null,
+              },
+            });
+            rows.push(row);
+          }
         }
 
         await tx.auditLog.create({
@@ -93,10 +138,9 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
             targetId: groupId,
             metadata: {
               targetUserId,
-              type,
               startDate,
               endDate,
-              years: rows.map((r) => r.year),
+              years: [...new Set(rows.map((r) => r.year))],
               totalWorkDays: rows.reduce((sum, r) => sum + Number(r.workDays), 0),
             },
           },

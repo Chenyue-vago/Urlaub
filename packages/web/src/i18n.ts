@@ -117,7 +117,7 @@ const zh: Dict = {
 
   'dashboard.requestVacation': '申请假期',
   'dashboard.cancelRequest': '取消申请',
-  'dashboard.confirmCancel': '确定要取消这条申请吗？',
+  'dashboard.confirmCancel': '确定要取消这条休假吗？取消后相应的假期天数会退回。',
   'dashboard.reasonLabel': '理由（可选）',
   'dashboard.typeLabel': '假期类型',
   'dashboard.submit': '提交',
@@ -206,6 +206,7 @@ const zh: Dict = {
   'errors.invalid_transition': '该请求当前状态不允许此操作',
   'errors.last_admin': '不能移除最后一位管理员',
   'errors.concurrent_request': '操作冲突，请刷新后重试',
+  'errors.overlapping_request': '该时间段与你已有的休假申请重叠',
   'errors.generic': '发生错误，请重试',
   'errors.loadFailed': '加载失败，请重试',
   'errors.retry': '重试',
@@ -317,7 +318,7 @@ const en: Dict = {
 
   'dashboard.requestVacation': 'Request Vacation',
   'dashboard.cancelRequest': 'Cancel request',
-  'dashboard.confirmCancel': 'Cancel this request?',
+  'dashboard.confirmCancel': 'Cancel this leave? The vacation days will be returned to your balance.',
   'dashboard.reasonLabel': 'Reason (optional)',
   'dashboard.typeLabel': 'Vacation type',
   'dashboard.submit': 'Submit',
@@ -406,6 +407,7 @@ const en: Dict = {
   'errors.invalid_transition': 'This request cannot be changed from its current status',
   'errors.last_admin': 'Cannot remove the last remaining admin',
   'errors.concurrent_request': 'This conflicted with another change, please refresh and retry',
+  'errors.overlapping_request': 'This date range overlaps an existing leave request of yours',
   'errors.generic': 'Something went wrong, please try again',
   'errors.loadFailed': 'Failed to load, please try again',
   'errors.retry': 'Retry',

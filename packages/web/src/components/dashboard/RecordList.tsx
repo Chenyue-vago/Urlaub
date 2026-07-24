@@ -2,6 +2,7 @@ import { Palmtree, X } from 'lucide-react';
 import type { LeaveRequestResponse } from '../../services/leave';
 import { useTranslation } from '../../i18n';
 import { formatDisplayDate } from '../../utils';
+import { canCancelRecord, todayIso } from './canCancel';
 
 interface RecordListProps {
   records: LeaveRequestResponse[];
@@ -21,6 +22,7 @@ export function RecordList({ records, selectedYear, onCancel, cancellingId }: Re
   const { t } = useTranslation();
 
   const sorted = [...records].sort((a, b) => b.startDate.localeCompare(a.startDate));
+  const today = todayIso();
 
   return (
     <div className="section">
@@ -67,7 +69,7 @@ export function RecordList({ records, selectedYear, onCancel, cancellingId }: Re
                     </span>
                     {record.reason && <span className="record-desc">{record.reason}</span>}
                   </div>
-                  {record.status === 'pending' && (
+                  {canCancelRecord(record, today) && (
                     <button
                       className="record-delete"
                       onClick={() => onCancel(record.id)}

@@ -7,12 +7,13 @@ import { AppError } from "../src/lib/errors.js";
 
 describe("createLeave", () => {
   it("member request within balance → pending rows, balance reserved", async () => {
+    // contractualDays:0 so auto-allocation draws purely from statutory here.
+    await makeSettings({ statutoryDays: 20, contractualDays: 0 });
     const user = await makeUser({ employmentStartDate: "2025-01-01" });
     const group = await createLeave({
       actor: { id: user.id, role: "member" },
       startDate: "2025-03-04",
       endDate: "2025-03-05",
-      type: "statutory",
       reason: "spring break",
     });
 
@@ -28,7 +29,7 @@ describe("createLeave", () => {
   });
 
   it("request exceeding available → throws insufficient_balance, nothing created", async () => {
-    await makeSettings({ statutoryDays: 2 });
+    await makeSettings({ statutoryDays: 2, contractualDays: 0 });
     const user = await makeUser({ employmentStartDate: "2025-01-01" });
 
     await expect(
@@ -36,7 +37,6 @@ describe("createLeave", () => {
         actor: { id: user.id, role: "member" },
         startDate: "2025-03-04",
         endDate: "2025-03-06", // 3 workdays > 2 available
-        type: "statutory",
         reason: "too long",
       })
     ).rejects.toMatchObject({ code: "insufficient_balance", status: 409 });
@@ -46,12 +46,12 @@ describe("createLeave", () => {
   });
 
   it("cross-year request → 2 rows sharing groupId, correct per-year workDays", async () => {
+    await makeSettings({ statutoryDays: 20, contractualDays: 0 });
     const user = await makeUser({ employmentStartDate: "2020-01-01" });
     const group = await createLeave({
       actor: { id: user.id, role: "member" },
       startDate: "2025-12-29",
       endDate: "2026-01-03",
-      type: "statutory",
       reason: "new year",
     });
 
@@ -87,7 +87,6 @@ describe("createLeave", () => {
       targetUserId: member.id,
       startDate: "2025-04-01",
       endDate: "2025-04-02",
-      type: "contractual",
       reason: "recorded by admin",
     });
 
@@ -111,13 +110,13 @@ describe("createLeave", () => {
         targetUserId: b.id,
         startDate: "2025-05-05",
         endDate: "2025-05-06",
-        type: "statutory",
       })
     ).rejects.toBeInstanceOf(AppError);
   });
 
   it("concurrency: parallel requests that ALL fit → all succeed (retry absorbs conflicts)", async () => {
-    // Default 20 statutory days; four disjoint 2-day requests = 8 ≤ 20.
+    // 20 statutory days, 0 contractual; four disjoint 2-day requests = 8 ≤ 20.
+    await makeSettings({ statutoryDays: 20, contractualDays: 0 });
     const user = await makeUser({ employmentStartDate: "2025-01-01" });
 
     const mk = (start: string, end: string) =>
@@ -125,7 +124,6 @@ describe("createLeave", () => {
         actor: { id: user.id, role: "member" },
         startDate: start,
         endDate: end,
-        type: "statutory",
         reason: "all-fit",
       });
 
@@ -144,7 +142,7 @@ describe("createLeave", () => {
   });
 
   it("concurrency: two parallel requests that together exceed balance → exactly one succeeds", async () => {
-    await makeSettings({ statutoryDays: 3 });
+    await makeSettings({ statutoryDays: 3, contractualDays: 0 });
     const user = await makeUser({ employmentStartDate: "2025-01-01" });
 
     const mk = (start: string, end: string) =>
@@ -152,7 +150,6 @@ describe("createLeave", () => {
         actor: { id: user.id, role: "member" },
         startDate: start,
         endDate: end,
-        type: "statutory",
         reason: "race",
       });
 
