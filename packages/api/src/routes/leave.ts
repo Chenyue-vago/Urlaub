@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth, requireAdmin } from "../auth/context.js";
 import { badRequest, forbidden, notFound } from "../lib/errors.js";
-import { createLeave, cancelLeave, decideLeave } from "../services/leave.js";
+import { createLeave, cancelLeave, decideLeave, hideLeaveGroup } from "../services/leave.js";
 import { listLeaveRequests, getLeaveGroupByRowId } from "../services/queries.js";
 import { toLeaveRequestDTO } from "../lib/serialize.js";
 
@@ -85,6 +85,19 @@ export async function leaveRoutes(app: FastifyInstance): Promise<void> {
     const found = await getLeaveGroupByRowId(id);
     if (!found) throw notFound("leave_not_found");
     const rows = await cancelLeave({
+      actor: { id: req.user!.id, role: req.user!.role },
+      groupId: found.row.groupId,
+    });
+    return rows.map(toLeaveRequestDTO);
+  });
+
+  // Soft-hide a cancelled group from the owner's own dashboard (row stays for
+  // balance history + audit; see hideLeaveGroup for the owner/cancelled guards).
+  app.post("/leave-requests/:id/hide", { preHandler: requireAuth }, async (req) => {
+    const { id } = req.params as { id: string };
+    const found = await getLeaveGroupByRowId(id);
+    if (!found) throw notFound("leave_not_found");
+    const rows = await hideLeaveGroup({
       actor: { id: req.user!.id, role: req.user!.role },
       groupId: found.row.groupId,
     });

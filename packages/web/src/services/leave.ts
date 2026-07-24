@@ -46,6 +46,11 @@ export function cancelLeaveRequest(api: Api, id: string): Promise<LeaveRequestRe
   return api.apiFetch<LeaveRequestResponse>(`/leave-requests/${id}/cancel`, { method: "POST" });
 }
 
+/** Soft-hide a cancelled request from the owner's dashboard (row is kept). */
+export function hideLeaveRequest(api: Api, id: string): Promise<LeaveRequestResponse[]> {
+  return api.apiFetch<LeaveRequestResponse[]>(`/leave-requests/${id}/hide`, { method: "POST" });
+}
+
 export function approveLeaveRequest(api: Api, id: string): Promise<LeaveRequestResponse> {
   return api.apiFetch<LeaveRequestResponse>(`/leave-requests/${id}/approve`, { method: "POST" });
 }

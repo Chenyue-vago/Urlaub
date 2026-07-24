@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RecordList } from './RecordList';
 import type { LeaveRequestResponse } from '../../services/leave';
 
@@ -71,5 +72,26 @@ describe('RecordList cancel button', () => {
       />
     );
     expect(screen.queryByTitle('Cancel request')).not.toBeInTheDocument();
+  });
+
+  it('shows a REMOVE button only on cancelled entries and calls onHide', async () => {
+    const user = userEvent.setup();
+    const onHide = vi.fn();
+    render(
+      <RecordList
+        records={[
+          record({ id: 'can', status: 'cancelled' }),
+          record({ id: 'rej', status: 'rejected' }),
+          record({ id: 'appr', status: 'approved' }),
+        ]}
+        selectedYear={2100}
+        onCancel={vi.fn()}
+        onHide={onHide}
+      />
+    );
+    const removeButtons = screen.getAllByTitle('Remove from list');
+    expect(removeButtons).toHaveLength(1); // only the cancelled one
+    await user.click(removeButtons[0]);
+    expect(onHide).toHaveBeenCalledWith('can');
   });
 });

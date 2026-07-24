@@ -61,6 +61,10 @@ model LeaveRequest {
   type          LeaveType
   year          Int
   isCarryOver   Boolean     @default(false) @map("is_carry_over")
+  // Soft per-user hide: a member may dismiss a CANCELLED group from their own
+  // dashboard. The row stays (balance history + audit_log unaffected); list
+  // queries filter these out. Never set for pending/approved/rejected.
+  hiddenByUser  Boolean     @default(false) @map("hidden_by_user")
   status        LeaveStatus @default(pending)
   reason        String      @default("")
   decidedById   String?     @map("decided_by_id")

@@ -278,3 +278,38 @@ export async function cancelLeave(input: CancelLeaveInput): Promise<LeaveRequest
     return tx.leaveRequest.findMany({ where: { groupId }, orderBy: { year: "asc" } });
   });
 }
+
+export interface HideLeaveInput {
+  actor: Actor;
+  groupId: string;
+}
+
+/**
+ * Soft-hide a CANCELLED group from its owner's dashboard. The rows stay (so
+ * balance history and the audit log are untouched); list queries filter out
+ * hiddenByUser rows. Only the owner may hide, and only a fully-cancelled group
+ * — pending/approved/rejected can never be hidden (rejected is kept for audit).
+ */
+export async function hideLeaveGroup(input: HideLeaveInput): Promise<LeaveRequest[]> {
+  const { actor, groupId } = input;
+
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.leaveRequest.findMany({ where: { groupId } });
+    if (rows.length === 0) throw notFound("leave_not_found");
+
+    if (rows[0].userId !== actor.id) throw forbidden("forbidden");
+
+    // Only hide when EVERY row is cancelled. A conditional updateMany alone
+    // would partially hide a mixed group, so guard explicitly first.
+    if (!rows.every((r) => r.status === "cancelled")) {
+      throw conflict("invalid_transition");
+    }
+
+    await tx.leaveRequest.updateMany({
+      where: { groupId, status: "cancelled" },
+      data: { hiddenByUser: true },
+    });
+
+    return tx.leaveRequest.findMany({ where: { groupId }, orderBy: { year: "asc" } });
+  });
+}

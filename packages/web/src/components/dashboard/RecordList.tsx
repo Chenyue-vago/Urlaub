@@ -1,4 +1,4 @@
-import { Palmtree, X } from 'lucide-react';
+import { Palmtree, X, Trash2 } from 'lucide-react';
 import type { LeaveRequestResponse } from '../../services/leave';
 import { useTranslation } from '../../i18n';
 import { formatDisplayDate } from '../../utils';
@@ -8,7 +8,10 @@ interface RecordListProps {
   records: LeaveRequestResponse[];
   selectedYear: number;
   onCancel: (id: string) => void;
+  /** Soft-hide a cancelled record from this list. */
+  onHide?: (id: string) => void;
   cancellingId?: string;
+  hidingId?: string;
 }
 
 const STATUS_LABEL_KEY: Record<LeaveRequestResponse['status'], string> = {
@@ -18,7 +21,14 @@ const STATUS_LABEL_KEY: Record<LeaveRequestResponse['status'], string> = {
   cancelled: 'status.cancelled',
 };
 
-export function RecordList({ records, selectedYear, onCancel, cancellingId }: RecordListProps) {
+export function RecordList({
+  records,
+  selectedYear,
+  onCancel,
+  onHide,
+  cancellingId,
+  hidingId,
+}: RecordListProps) {
   const { t } = useTranslation();
 
   const sorted = [...records].sort((a, b) => b.startDate.localeCompare(a.startDate));
@@ -77,6 +87,16 @@ export function RecordList({ records, selectedYear, onCancel, cancellingId }: Re
                       disabled={cancellingId === record.id}
                     >
                       <X size={16} />
+                    </button>
+                  )}
+                  {record.status === 'cancelled' && onHide && (
+                    <button
+                      className="record-delete"
+                      onClick={() => onHide(record.id)}
+                      title={t('dashboard.removeRecord')}
+                      disabled={hidingId === record.id}
+                    >
+                      <Trash2 size={16} />
                     </button>
                   )}
                 </div>

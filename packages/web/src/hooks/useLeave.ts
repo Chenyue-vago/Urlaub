@@ -5,6 +5,7 @@ import {
   cancelLeaveRequest,
   createLeaveRequest,
   getLeaveRequest,
+  hideLeaveRequest,
   listLeaveRequests,
   rejectLeaveRequest,
   type CreateLeaveRequestPayload,
@@ -56,6 +57,14 @@ export function useCancelLeaveRequest() {
   const api = useApi();
   return useMutation({
     mutationFn: (id: string) => cancelLeaveRequest(api, id),
+    onSuccess: invalidateLeaveQueries,
+  });
+}
+
+export function useHideLeaveRequest() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: (id: string) => hideLeaveRequest(api, id),
     onSuccess: invalidateLeaveQueries,
   });
 }

@@ -13,7 +13,12 @@ export function UserRecordsModal({ user, onClose }: UserRecordsModalProps) {
   const { t } = useTranslation();
   const records = useLeaveRequests({ userId: user.id });
 
-  const sorted = [...(records.data ?? [])].sort((a, b) => b.startDate.localeCompare(a.startDate));
+  // Admin records view shows only meaningful leave: cancelled entries are
+  // hidden here (they no longer reserve days), while rejected entries are kept
+  // for audit visibility. The audit log itself remains the full history.
+  const sorted = [...(records.data ?? [])]
+    .filter((r) => r.status !== 'cancelled')
+    .sort((a, b) => b.startDate.localeCompare(a.startDate));
 
   return (
     <div className="modal-overlay" onClick={onClose}>

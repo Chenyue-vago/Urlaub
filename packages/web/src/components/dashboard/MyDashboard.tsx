@@ -8,6 +8,7 @@ import {
   useLeaveRequests,
   useCreateLeaveRequest,
   useCancelLeaveRequest,
+  useHideLeaveRequest,
 } from '../../hooks/useLeave';
 import { useToast } from '../Toast';
 import { translateApiErrorCode } from '../../lib/errorMessages';
@@ -32,6 +33,7 @@ export function MyDashboard() {
   const [selectedYear, setSelectedYear] = useState<number>(loadSelectedYear);
   const [showAddForm, setShowAddForm] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | undefined>(undefined);
+  const [hidingId, setHidingId] = useState<string | undefined>(undefined);
 
   const me = useMe();
   const updateMe = useUpdateMe();
@@ -39,6 +41,7 @@ export function MyDashboard() {
   const leaveRequests = useLeaveRequests({ year: selectedYear });
   const createLeaveRequest = useCreateLeaveRequest();
   const cancelLeaveRequest = useCancelLeaveRequest();
+  const hideLeaveRequest = useHideLeaveRequest();
 
   const handleYearChange = (delta: number) => {
     setSelectedYear((prev) => {
@@ -78,6 +81,18 @@ export function MyDashboard() {
     setCancellingId(id);
     cancelLeaveRequest.mutate(id, {
       onSettled: () => setCancellingId(undefined),
+      onError: (err) => {
+        const code = err instanceof ApiError ? err.code : undefined;
+        showError(translateApiErrorCode(code, t));
+      },
+    });
+  };
+
+  const handleHide = (id: string) => {
+    if (!window.confirm(t('dashboard.confirmRemove'))) return;
+    setHidingId(id);
+    hideLeaveRequest.mutate(id, {
+      onSettled: () => setHidingId(undefined),
       onError: (err) => {
         const code = err instanceof ApiError ? err.code : undefined;
         showError(translateApiErrorCode(code, t));
@@ -139,7 +154,9 @@ export function MyDashboard() {
           records={leaveRequests.data ?? []}
           selectedYear={selectedYear}
           onCancel={handleCancel}
+          onHide={handleHide}
           cancellingId={cancellingId}
+          hidingId={hidingId}
         />
       )}
 

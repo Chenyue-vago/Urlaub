@@ -5,13 +5,18 @@ import { getBalance } from "./balance.js";
 import { toCalendarEntryDTO } from "../lib/serialize.js";
 import type { Db } from "./record.js";
 
-/** List leave requests, optionally scoped to a single user and/or year. */
+/**
+ * List leave requests, optionally scoped to a single user and/or year.
+ * Rows a member has soft-hidden from their dashboard (hiddenByUser) are always
+ * excluded — the row still exists for balance history and the audit log.
+ */
 export async function listLeaveRequests(opts: {
   userId?: string;
   year?: number;
 }): Promise<LeaveRequest[]> {
   return prisma.leaveRequest.findMany({
     where: {
+      hiddenByUser: false,
       ...(opts.userId ? { userId: opts.userId } : {}),
       ...(opts.year ? { year: opts.year } : {}),
     },
