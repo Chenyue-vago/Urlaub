@@ -16,7 +16,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <LanguageProvider>
           <ToastProvider>
             <AuthGate>
-              <BrowserRouter>
+              {/* basename = Vite's BASE_URL ('/Urlaub/' in the Pages build,
+                  '/' in dev) so routing stays under the deployed subpath. */}
+              <BrowserRouter basename={import.meta.env.BASE_URL}>
                 <App />
               </BrowserRouter>
             </AuthGate>
