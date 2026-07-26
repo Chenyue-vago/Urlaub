@@ -36,14 +36,41 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        # `predev` / `prebuild` hooks already extract Germany holidays into src/data/.
-        run: npm run build
+      # The web build is baked with its backend URL and Clerk key at build time
+      # (Vite inlines VITE_* env vars). These live in repo config, not the code:
+      #   - Variable  VITE_API_URL                 → the deployed API base URL
+      #   - Secret    VITE_CLERK_PUBLISHABLE_KEY   → Clerk publishable key
+      # Fail loudly if either is missing, so we never publish a frontend that
+      # silently can't reach the backend or sign users in.
+      - name: Check required build config
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+        run: |
+          missing=0
+          if [ -z "$VITE_API_URL" ]; then
+            echo "::error::Repository variable VITE_API_URL is not set (Settings → Secrets and variables → Actions → Variables). Set it to the deployed API base URL, e.g. https://urlaub-api.up.railway.app"
+            missing=1
+          fi
+          if [ -z "$VITE_CLERK_PUBLISHABLE_KEY" ]; then
+            echo "::error::Repository secret VITE_CLERK_PUBLISHABLE_KEY is not set (Settings → Secrets and variables → Actions → Secrets)."
+            missing=1
+          fi
+          [ "$missing" -eq 0 ] || exit 1
+
+      - name: Build web app
+        # Builds packages/web (and its @urlaub/shared dependency via the
+        # workspace). The prebuild hook extracts DE holidays into src/data/.
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+        run: npm --workspace urlaub-manager run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          # Vite (base: '/Urlaub/') emits the site here in the monorepo.
+          path: packages/web/dist
 
   deploy:
     needs: build

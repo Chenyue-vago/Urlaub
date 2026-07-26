@@ -6,6 +6,10 @@
     "dev:web": "npm --workspace packages/web run dev",
     "dev:api": "npm --workspace packages/api run dev",
     "test": "npm --workspaces --if-present run test",
-    "build": "npm --workspaces --if-present run build"
+    "prisma:generate": "npm --workspace @urlaub/api run prisma:generate",
+    "build:shared": "npm --workspace @urlaub/shared run build",
+    "build:api": "npm run prisma:generate && npm run build:shared && npm --workspace @urlaub/api run build",
+    "build:web": "npm run build:shared && npm --workspace urlaub-manager run build",
+    "build": "npm run build:api && npm run build:web"
   }
 }
