@@ -7,7 +7,20 @@ const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
  * Wraps children in Clerk's provider. Mounted at the app root in main.tsx.
  */
 export function ClerkProviderWrapper({ children }: { children: ReactNode }) {
-  return <ClerkProvider publishableKey={publishableKey}>{children}</ClerkProvider>;
+  // The app is served under Vite's BASE_URL ('/Urlaub/' on GitHub Pages, '/' in
+  // dev). Point Clerk's post-auth redirects there; otherwise it defaults to '/'
+  // and lands outside the deployed subpath (a 404 on Pages).
+  const base = import.meta.env.BASE_URL;
+  return (
+    <ClerkProvider
+      publishableKey={publishableKey}
+      signInFallbackRedirectUrl={base}
+      signUpFallbackRedirectUrl={base}
+      afterSignOutUrl={base}
+    >
+      {children}
+    </ClerkProvider>
+  );
 }
 
 /**
