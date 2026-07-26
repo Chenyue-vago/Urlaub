@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeSettings, makeUser, prisma } from "./helpers/factories.js";
+import { makeLeave, makeSettings, makeUser, prisma } from "./helpers/factories.js";
 import { cancelLeave, createLeave, decideLeave } from "../src/services/leave.js";
 import { getBalance } from "../src/services/balance.js";
 import { AppError } from "../src/lib/errors.js";
@@ -152,6 +152,25 @@ describe("cancelLeave", () => {
     await expect(
       cancelLeave({ actor: { id: member.id, role: "member" }, groupId: group[0].groupId })
     ).rejects.toMatchObject({ code: "invalid_transition", status: 409 });
+  });
+
+  it("member cannot cancel a vacation that has already STARTED (ongoing) → invalid_transition", async () => {
+    const member = await makeUser({ employmentStartDate: "2019-01-01" });
+    // Started yesterday, still ongoing -> must be locked. Insert directly so
+    // the balance check doesn't interfere with the guard we're testing.
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const row = await makeLeave({ userId: member.id, start: yesterday, end: tomorrow, status: "approved" });
+    await expect(
+      cancelLeave({ actor: { id: member.id, role: "member" }, groupId: row.groupId })
+    ).rejects.toMatchObject({ code: "invalid_transition", status: 409 });
+  });
+
+  it("member CAN cancel a vacation that starts in the future", async () => {
+    const member = await makeUser({ employmentStartDate: "2019-01-01" });
+    const group = await pendingGroup(member.id, "2099-03-02", "2099-03-06");
+    const rows = await cancelLeave({ actor: { id: member.id, role: "member" }, groupId: group[0].groupId });
+    expect(rows.every((r) => r.status === "cancelled")).toBe(true);
   });
 
   it("unknown groupId → not_found", async () => {

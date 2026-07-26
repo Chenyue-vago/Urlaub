@@ -77,10 +77,20 @@ describe("hideLeaveGroup", () => {
     expect(inDb!.hiddenByUser).toBe(false);
   });
 
-  it("allows hiding a cancelled group ending in the future", async () => {
+  it("allows hiding a cancelled group starting in the future", async () => {
     const user = await makeUser({});
     const g = await makeLeave({ userId: user.id, start: "2099-03-02", end: "2099-03-06", status: "cancelled", year: 2099 });
     const rows = await hideLeaveGroup({ actor: { id: user.id, role: "member" }, groupId: g.groupId });
     expect(rows.every((r) => r.hiddenByUser)).toBe(true);
+  });
+
+  it("refuses to hide a cancelled group that has already STARTED (ongoing)", async () => {
+    const user = await makeUser({});
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const g = await makeLeave({ userId: user.id, start: yesterday, end: tomorrow, status: "cancelled" });
+    await expect(
+      hideLeaveGroup({ actor: { id: user.id, role: "member" }, groupId: g.groupId })
+    ).rejects.toMatchObject({ code: "invalid_transition", status: 409 });
   });
 });
