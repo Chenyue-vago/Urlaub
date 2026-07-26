@@ -1,0 +1,78 @@
+name: CI
+
+# Gates pull requests into `main`: the whole monorepo must test and build
+# cleanly before a merge. The `main` branch-protection ruleset requires this
+# check to pass. Also runs on pushes to `main` as a post-merge safety net.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    # The API test suite runs against a real Postgres (TRUNCATE between cases,
+    # `prisma migrate deploy` in globalSetup). Provide one as a service container.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: urlaub
+          POSTGRES_PASSWORD: urlaub
+          POSTGRES_DB: urlaub_test
+        ports:
+          - 5432:5432
+        # Wait until Postgres is ready before the job's steps start.
+        options: >-
+          --health-cmd "pg_isready -U urlaub"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Consumed by the API test helpers (env-test.ts / global-setup.ts), which
+      # copy it into DATABASE_URL before Prisma reads it.
+      TEST_DATABASE_URL: postgresql://urlaub:urlaub@localhost:5432/urlaub_test
+      DATABASE_URL: postgresql://urlaub:urlaub@localhost:5432/urlaub_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm --workspace @urlaub/api run prisma:generate
+
+      # @urlaub/shared resolves to its built ./dist (package.json "main"), and
+      # the API tests import it at runtime — so it must be built before tests,
+      # not only in the later build step. Without this, vitest fails with
+      # "Failed to resolve entry for package @urlaub/shared".
+      - name: Build shared package
+        run: npm --workspace @urlaub/shared run build
+
+      - name: Test (all workspaces)
+        # The web service tests build an API client via createApi(), which reads
+        # VITE_API_URL. In dev that comes from packages/web/.env (gitignored, so
+        # absent in CI); supply a dummy value here — the tests mock fetch and
+        # only assert on the request URL/shape, so the host just needs to parse.
+        env:
+          VITE_API_URL: http://localhost:3002
+        run: npm test
+
+      - name: Build (all workspaces)
+        run: npm run build
