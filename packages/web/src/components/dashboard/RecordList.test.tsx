@@ -94,4 +94,18 @@ describe('RecordList cancel button', () => {
     await user.click(removeButtons[0]);
     expect(onHide).toHaveBeenCalledWith('can');
   });
+
+  it('does NOT show a remove button for a cancelled vacation already in the past', () => {
+    render(
+      <RecordList
+        records={[
+          record({ id: 'pastcan', status: 'cancelled', startDate: '2020-01-01', endDate: '2020-01-05' }),
+        ]}
+        selectedYear={2020}
+        onCancel={vi.fn()}
+        onHide={vi.fn()}
+      />
+    );
+    expect(screen.queryByTitle('Remove from list')).not.toBeInTheDocument();
+  });
 });

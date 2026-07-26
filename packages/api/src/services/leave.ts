@@ -305,6 +305,12 @@ export async function hideLeaveGroup(input: HideLeaveInput): Promise<LeaveReques
       throw conflict("invalid_transition");
     }
 
+    // A past vacation stays visible: you can't remove a cancelled group whose
+    // dates have already elapsed (same not-past rule as cancelLeave).
+    const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+    const latestEnd = rows.reduce((max, r) => (r.endDate > max ? r.endDate : max), rows[0].endDate);
+    if (latestEnd < today) throw conflict("invalid_transition");
+
     await tx.leaveRequest.updateMany({
       where: { groupId, status: "cancelled" },
       data: { hiddenByUser: true },

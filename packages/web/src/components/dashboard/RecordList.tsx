@@ -2,7 +2,7 @@ import { Palmtree, X, Trash2 } from 'lucide-react';
 import type { LeaveRequestResponse } from '../../services/leave';
 import { useTranslation } from '../../i18n';
 import { formatDisplayDate } from '../../utils';
-import { canCancelRecord, todayIso } from './canCancel';
+import { canCancelRecord, canHideRecord, todayIso } from './canCancel';
 
 interface RecordListProps {
   records: LeaveRequestResponse[];
@@ -89,7 +89,7 @@ export function RecordList({
                       <X size={16} />
                     </button>
                   )}
-                  {record.status === 'cancelled' && onHide && (
+                  {onHide && canHideRecord(record, today) && (
                     <button
                       className="record-delete"
                       onClick={() => onHide(record.id)}

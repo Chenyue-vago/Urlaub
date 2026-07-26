@@ -145,6 +145,15 @@ describe("cancelLeave", () => {
     ).rejects.toMatchObject({ code: "invalid_transition", status: 409 });
   });
 
+  it("member cannot cancel leave that has already ended → invalid_transition", async () => {
+    const member = await makeUser({ employmentStartDate: "2019-01-01" });
+    // A vacation entirely in the past.
+    const group = await pendingGroup(member.id, "2020-03-02", "2020-03-06");
+    await expect(
+      cancelLeave({ actor: { id: member.id, role: "member" }, groupId: group[0].groupId })
+    ).rejects.toMatchObject({ code: "invalid_transition", status: 409 });
+  });
+
   it("unknown groupId → not_found", async () => {
     const member = await makeUser({});
     await expect(

@@ -16,6 +16,19 @@ export function canCancelRecord(
   return reserves && record.endDate >= today;
 }
 
+/**
+ * Whether the owning member may remove (soft-hide) this cancelled record from
+ * their dashboard. Mirrors the backend hideLeaveGroup rule: only a CANCELLED
+ * record that has not fully ended yet can be removed — a past vacation stays
+ * visible so history is preserved.
+ */
+export function canHideRecord(
+  record: { status: LeaveRequestResponse['status']; endDate: string },
+  today: string
+): boolean {
+  return record.status === 'cancelled' && record.endDate >= today;
+}
+
 /** Local calendar date as "YYYY-MM-DD" (matches how leave dates are stored). */
 export function todayIso(): string {
   const now = new Date();

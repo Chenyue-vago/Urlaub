@@ -62,4 +62,25 @@ describe("hideLeaveGroup", () => {
       hideLeaveGroup({ actor: { id: user.id, role: "member" }, groupId: "nope" })
     ).rejects.toMatchObject({ status: 404 });
   });
+
+  it("refuses to hide a cancelled group whose vacation is already in the past", async () => {
+    const user = await makeUser({});
+    // A vacation firmly in the past (2020) that was cancelled — must not be
+    // removable from the list, so history stays visible.
+    const g = await makeLeave({ userId: user.id, start: "2020-03-02", end: "2020-03-06", status: "cancelled", year: 2020 });
+
+    await expect(
+      hideLeaveGroup({ actor: { id: user.id, role: "member" }, groupId: g.groupId })
+    ).rejects.toMatchObject({ code: "invalid_transition", status: 409 });
+
+    const inDb = await prisma.leaveRequest.findFirst({ where: { groupId: g.groupId } });
+    expect(inDb!.hiddenByUser).toBe(false);
+  });
+
+  it("allows hiding a cancelled group ending in the future", async () => {
+    const user = await makeUser({});
+    const g = await makeLeave({ userId: user.id, start: "2099-03-02", end: "2099-03-06", status: "cancelled", year: 2099 });
+    const rows = await hideLeaveGroup({ actor: { id: user.id, role: "member" }, groupId: g.groupId });
+    expect(rows.every((r) => r.hiddenByUser)).toBe(true);
+  });
 });
