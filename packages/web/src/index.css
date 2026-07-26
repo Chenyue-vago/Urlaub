@@ -1934,7 +1934,7 @@ body {
 
 .admin-audit-row {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: auto 1fr 1fr auto;
   gap: 0.75rem;
   padding: 0.6rem 0.85rem;
   background: var(--color-bg-subtle);
@@ -1942,6 +1942,37 @@ body {
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
   align-items: center;
+}
+
+.admin-audit-row-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.admin-audit-row-button:hover {
+  border-color: var(--color-border-strong, var(--color-border));
+}
+
+.admin-audit-chevron {
+  transition: transform 0.15s ease;
+  color: var(--color-text-muted);
+}
+
+.admin-audit-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.admin-audit-detail {
+  padding: 0.55rem 0.85rem 0.7rem 2rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.admin-audit-detail-text {
+  margin: 0;
 }
 
 .admin-audit-actor {

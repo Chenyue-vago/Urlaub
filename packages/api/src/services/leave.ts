@@ -24,6 +24,14 @@ function toDate(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00.000Z`);
 }
 
+/** Earliest start / latest end of a group's rows as "YYYY-MM-DD" — snapshotted
+ * into audit metadata so the audit log can show the vacation's dates. */
+function groupDateRange(rows: LeaveRequest[]): { startDate: string; endDate: string } {
+  const start = rows.reduce((min, r) => (r.startDate < min ? r.startDate : min), rows[0].startDate);
+  const end = rows.reduce((max, r) => (r.endDate > max ? r.endDate : max), rows[0].endDate);
+  return { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) };
+}
+
 /**
  * Create a leave "reservation". Splits the range into one row per calendar
  * year (sharing a single groupId), checks that every year+bucket has enough
@@ -214,13 +222,19 @@ export async function decideLeave(input: DecideLeaveInput): Promise<LeaveRequest
     });
     if (count === 0) throw conflict("invalid_transition");
 
+    const range = groupDateRange(rows);
     await tx.auditLog.create({
       data: {
         actorId: actor.id,
         action: action === "approve" ? "approve_leave" : "reject_leave",
         targetType: "leave_group",
         targetId: groupId,
-        metadata: { targetUserId: rows[0].userId, note: note ?? null },
+        metadata: {
+          targetUserId: rows[0].userId,
+          startDate: range.startDate,
+          endDate: range.endDate,
+          note: note ?? null,
+        },
       },
     });
 
@@ -275,7 +289,7 @@ export async function cancelLeave(input: CancelLeaveInput): Promise<LeaveRequest
         action: "cancel_leave",
         targetType: "leave_group",
         targetId: groupId,
-        metadata: { targetUserId: ownerId },
+        metadata: { targetUserId: ownerId, ...groupDateRange(rows) },
       },
     });
 

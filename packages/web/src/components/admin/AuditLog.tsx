@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react';
-import { ScrollText } from 'lucide-react';
+import { ScrollText, ChevronRight } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { useAdminUsers, useAuditLog } from '../../hooks/useAdmin';
+import type { AuditLogEntry } from '../../services/admin';
+import { auditDetail } from './auditDetail';
 
 const PAGE_SIZE = 20;
 
 export function AuditLog() {
   const { t } = useTranslation();
   const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const [pages, setPages] = useState<{ actorId: string; action: string; createdAt: string; id: string }[][]>([]);
+  const [pages, setPages] = useState<AuditLogEntry[][]>([]);
+  const [expandedId, setExpandedId] = useState<string | undefined>(undefined);
   const auditLog = useAuditLog({ limit: PAGE_SIZE, cursor });
   const adminUsers = useAdminUsers();
 
@@ -62,13 +65,38 @@ export function AuditLog() {
       ) : (
         <>
           <div className="admin-audit-list">
-            {items.map((item) => (
-              <div key={item.id} className="admin-audit-row">
-                <span className="admin-audit-actor">{nameByUserId.get(item.actorId) ?? item.actorId}</span>
-                <span className="admin-audit-action">{item.action}</span>
-                <span className="admin-audit-time">{new Date(item.createdAt).toLocaleString()}</span>
-              </div>
-            ))}
+            {items.map((item) => {
+              const expanded = expandedId === item.id;
+              const detail = auditDetail(item, (id) => nameByUserId.get(id) ?? id);
+              return (
+                <div key={item.id} className="admin-audit-item">
+                  <button
+                    type="button"
+                    className="admin-audit-row admin-audit-row-button"
+                    aria-expanded={expanded}
+                    onClick={() => setExpandedId(expanded ? undefined : item.id)}
+                  >
+                    <ChevronRight
+                      size={14}
+                      aria-hidden="true"
+                      className={`admin-audit-chevron${expanded ? ' expanded' : ''}`}
+                    />
+                    <span className="admin-audit-actor">
+                      {nameByUserId.get(item.actorId) ?? item.actorId}
+                    </span>
+                    <span className="admin-audit-action">{item.action}</span>
+                    <span className="admin-audit-time">
+                      {new Date(item.createdAt).toLocaleString()}
+                    </span>
+                  </button>
+                  {expanded && (
+                    <div className="admin-audit-detail" data-testid="audit-detail">
+                      <p className="admin-audit-detail-text">{t(detail.key, detail.params)}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           {auditLog.data?.nextCursor && (
             <div className="admin-settings-footer">
