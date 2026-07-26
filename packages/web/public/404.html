@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Urlaubsverwaltung</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <script type="text/javascript">
+      // GitHub Pages is static: a deep link like /Urlaub/team has no matching
+      // file, so Pages serves this 404.html. We encode the path/query into a
+      // single query string and redirect to the app root; index.html decodes it
+      // back so the SPA router can handle the route. Standard spa-github-pages
+      // trick (https://github.com/rafgraph/spa-github-pages).
+      //
+      // pathSegmentsToKeep = 1 keeps the "/Urlaub" project-page prefix and
+      // rewrites only the app-internal part of the path.
+      var pathSegmentsToKeep = 1;
+
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
