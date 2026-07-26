@@ -59,12 +59,14 @@ jobs:
           [ "$missing" -eq 0 ] || exit 1
 
       - name: Build web app
-        # Builds packages/web (and its @urlaub/shared dependency via the
-        # workspace). The prebuild hook extracts DE holidays into src/data/.
+        # build:web builds @urlaub/shared first (web imports it and resolves to
+        # its built ./dist), then packages/web. The prebuild hook extracts DE
+        # holidays into src/data/. Building web alone fails with
+        # "Cannot find module @urlaub/shared" because shared/dist won't exist.
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
-        run: npm --workspace urlaub-manager run build
+        run: npm run build:web
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
