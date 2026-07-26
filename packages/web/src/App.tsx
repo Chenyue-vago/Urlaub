@@ -76,7 +76,9 @@ function App() {
                   <Settings size={18} />
                 </button>
               )}
-              <UserButton afterSignOutUrl="/" />
+              {/* BASE_URL ('/Urlaub/' on Pages, '/' in dev) — a hardcoded '/'
+                  here would override the provider and land off the subpath. */}
+              <UserButton afterSignOutUrl={import.meta.env.BASE_URL} />
             </div>
           </div>
         </div>
