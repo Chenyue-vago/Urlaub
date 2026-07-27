@@ -8,3 +8,4 @@ packages/api/.env
 packages/web/.env
 CLAUDE.md
 docs/
+scratchpad/
