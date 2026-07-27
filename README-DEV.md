@@ -1,71 +1,89 @@
-# Local Dev / Demo Runbook
+# Developer Guide — run locally & deploy
 
-Exact steps to run the Urlaub app end-to-end locally: Fastify+Prisma+Postgres
-API (`packages/api`) and the Vite React SPA (`packages/web`), both using
-Clerk auth.
+Everything needed to run the Urlaub app end-to-end on your machine and to deploy
+it. End-user instructions live in [README.md](README.md).
 
-## 0. Prereqs
+## Architecture
 
-- Node **>= 20**. On this machine, prepend the pinned nvm node to `PATH` for
-  every `node`/`npm` command:
-  ```bash
-  export PATH=/home/chenyue/.nvm/versions/node/v20.20.2/bin:$PATH
-  ```
+npm workspaces monorepo under `packages/`:
+
+- **web** (`packages/web`) — React + Vite SPA, Clerk for auth, TanStack Query.
+- **api** (`packages/api`) — Fastify + Prisma + PostgreSQL, Clerk token verification.
+- **shared** (`@urlaub/shared`) — entitlement/holiday math and the HTTP wire
+  contracts both sides import.
+
+Deployed as a split frontend/backend: **web → GitHub Pages**, **api + PostgreSQL
+→ Railway**, **auth → Clerk**.
+
+> ⚠️ **Build order matters.** `@urlaub/shared`'s `package.json` `main` points at
+> its build output (`./dist`). Anything that builds or tests a *single* package
+> does **not** build shared first, so a clean environment (CI, Railway, Pages)
+> fails with `Cannot find module '@urlaub/shared'` (and missing Prisma types if
+> `prisma generate` also hasn't run). This bit us in CI, on Railway, and on
+> Pages — and never locally, because a stale `packages/shared/dist/` hides it.
+> **Use the root scripts, which build shared first:** `npm run build:api`
+> (Railway), `npm run build:web` (Pages), `npm run build` (full). When a build
+> passes locally but fails remotely with a module-resolution error, reproduce
+> clean first: `rm -rf packages/*/dist node_modules/.prisma`.
+
+---
+
+## Run locally
+
+### 0. Prerequisites
+
+- Node **>= 20**.
 - Docker (for the Postgres container).
-- `packages/api/.env` with `DATABASE_URL`, `TEST_DATABASE_URL`, Clerk keys,
-  `WEB_ORIGIN=http://localhost:5173`, and **`PORT=3002`** (port 3000 is taken
-  on this machine, so the API is run on 3002 — see step 5).
-- `packages/web/.env` with `VITE_CLERK_PUBLISHABLE_KEY` and
-  `VITE_API_URL=http://localhost:3002`.
+- `packages/api/.env` — copy from `packages/api/.env.example`, fill in Clerk
+  keys. Set `WEB_ORIGIN=http://localhost:5173` and **`PORT=3002`** (port 3000 is
+  often taken; the API runs on 3002 here).
+- `packages/web/.env` — copy from `packages/web/.env.example`, set
+  `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_URL=http://localhost:3002`.
 
-These `.env` files are gitignored; copy from `.env.example` in each package
-if you don't have them yet and fill in the Clerk keys.
+The `.env` files are gitignored.
 
-## 1. Start Postgres
+### 1. Start Postgres
 
 ```bash
 docker compose -f packages/api/docker-compose.yml up -d
 ```
 
-This creates both the `urlaub` (dev) and `urlaub_test` databases in one
-container (`api-postgres-1`).
+Creates both the `urlaub` (dev) and `urlaub_test` databases in one container
+(`api-postgres-1`).
 
-## 2. Install dependencies (repo root)
+### 2. Install dependencies (repo root)
 
 ```bash
 npm install
 ```
 
-## 3. Migrate + seed the dev database
+### 3. Migrate + seed the dev database
 
 ```bash
 npm --workspace packages/api run prisma:migrate
 npm --workspace packages/api run prisma:seed
 ```
 
-The seed is idempotent (safe to re-run any time): it upserts a 12-person
-company —
+The seed is idempotent (safe to re-run). It upserts a 12-person company:
 
 - 3 admins: `founder1@vago-solutions.ai`, `founder2@vago-solutions.ai`,
   `assistant@vago-solutions.ai`
 - 9 members: `dev1@vago-solutions.ai` .. `dev9@vago-solutions.ai`
 
-— all with placeholder Clerk IDs (they cannot actually sign in), plus
-sample `leave_requests` around the current date so the Team Timeline
-(approved vacations in June-Aug 2026, including a half-day request) and the
-Admin Approvals Queue (pending requests, including one cross-year request
-split into linked segments via a shared `group_id`) have realistic content
-out of the box.
+All with placeholder Clerk IDs (they can't actually sign in), plus sample
+`leave_requests` around the current date so the Team Timeline and the Admin
+Approvals Queue (including a cross-year request split into linked segments via a
+shared `group_id`) have realistic content.
 
-## 4. Run the API (port 3002)
+### 4. Run the API (port 3002)
 
 ```bash
 PORT=3002 npm --workspace packages/api run dev
 ```
 
-Verify it's up: `curl localhost:3002/health` -> `{"status":"ok"}`.
+Verify: `curl localhost:3002/health` → `{"status":"ok"}`.
 
-## 5. Run the web app (port 5173)
+### 5. Run the web app (port 5173)
 
 In a second terminal:
 
@@ -75,40 +93,123 @@ npm --workspace packages/web run dev
 
 Open http://localhost:5173.
 
-## 6. First login -> become admin
+### 6. First login → become admin
 
-Sign in with your own `@vago-solutions.ai` email via Clerk. On first login
-the API's `resolveUser` auto-creates your user row with role `member`. To
-see the admin views (Approvals Queue, Users/Settings/Audit panel), promote
-yourself once via SQL:
+Sign in with your own `@vago-solutions.ai` email via Clerk. On first login the
+API's `resolveUser` auto-creates your user row as `member`. To see the admin
+views, promote yourself once via SQL:
 
 ```bash
-docker compose -f packages/api/docker-compose.yml ps   # confirm container name, e.g. api-postgres-1
 docker exec -i api-postgres-1 psql -U urlaub -d urlaub \
   -c "UPDATE users SET role='admin' WHERE email='YOUR_EMAIL@vago-solutions.ai';"
 ```
 
-Refresh the app in the browser afterwards.
+Refresh the app afterwards. (There is no self-service promotion — this is also
+how you bootstrap the first admin in production.)
 
-## 7. What to try in the demo
-
-- **Onboarding**: set your employment start date on first login.
-- **Request a vacation**: submit a request, see it land as pending and the
-  reserved balance update.
-- **Team timeline**: default current-month (July 2026) view shows several
-  seeded approved vacations (mix of statutory/contractual, plus a half-day).
-- **Admin approvals queue** (as admin): approve or reject a seeded pending
-  request; note the cross-year request (Dec 2026 -> Jan 2027) shown as a
-  linked group.
-- **Settings** (as admin): view/edit statutory/contractual day defaults and
-  carry-over deadline.
-- **Audit log** (as admin): see the recorded actions after approving/
-  rejecting/editing settings.
-
-## Verification commands used to confirm this setup works
+## Test & build
 
 ```bash
-npm --workspace packages/api run build
-npm --workspace packages/web run build
-npm --workspace packages/api test
+npm test        # all workspaces (Vitest); API tests need TEST_DATABASE_URL + Postgres
+npm run build   # full monorepo build (shared → api → web)
 ```
+
+---
+
+## Deploy
+
+Split frontend/backend. GitHub Pages hosts only static files, so the API and
+database live on Railway; the frontend talks to the API over HTTPS.
+
+```
+GitHub Pages (web)  ──HTTPS──▶  Railway (api)  ──▶  Railway PostgreSQL
+   VITE_API_URL                  WEB_ORIGIN = Pages origin (CORS)
+   VITE_CLERK_PUBLISHABLE_KEY    CLERK_SECRET_KEY
+         └──────────── Clerk (hosted login) ────────────┘
+```
+
+| Piece | Where | How it deploys |
+| --- | --- | --- |
+| `packages/web` | **GitHub Pages** (`chenyue-vago.github.io/Urlaub/`) | `.github/workflows/deploy.yml` on push to `main` |
+| `packages/api` | **Railway** | `railway.json` on push to `main` |
+| PostgreSQL | **Railway** (managed) | provisioned once in the Railway project |
+| Auth | **Clerk** | configured in the Clerk dashboard |
+
+### Clerk
+
+We use the Clerk **Development** instance (`pk_test_`/`sk_test_`) on purpose: the
+site has no custom domain we can set DNS on, and Clerk *production* instances
+require DNS verification that `github.io` can't satisfy. Add
+`https://chenyue-vago.github.io` to the instance's allowed origins. Email/password
+sign-in is enabled; sign-up is restricted to `@vago-solutions.ai` by the API's
+`ALLOWED_EMAIL_DOMAINS`.
+
+### Railway (backend + database)
+
+1. Create a Railway project from this GitHub repo, deploying branch `main`.
+   Railway reads `railway.json` (build `npm run build:api`; start runs
+   `prisma migrate deploy` then `node dist/server.js`).
+   - The `nixpacksPlan` form of `railway.json` was ignored by Railway; a
+     top-level `buildCommand` works.
+   - Keep **Root Directory** at the repo root (the whole workspace must install
+     so `@urlaub/shared` resolves).
+   - Enable **Wait for CI** so a red CI blocks the deploy.
+2. Add a **PostgreSQL** database (New → Database → PostgreSQL).
+3. On the API service, set Variables:
+
+   | Variable | Value |
+   | --- | --- |
+   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+   | `WEB_ORIGIN` | `https://chenyue-vago.github.io` (no path, no trailing slash) |
+   | `CLERK_SECRET_KEY` | from Clerk |
+   | `CLERK_PUBLISHABLE_KEY` | from Clerk |
+   | `ALLOWED_EMAIL_DOMAINS` | `vago-solutions.ai` |
+
+   Do **not** set `PORT` — Railway injects it (8080); the server reads `env.PORT`
+   and listens on `0.0.0.0`.
+4. Generate a public domain (Settings → Networking; target port 8080). Check
+   `curl https://<railway-url>/health` → `200`.
+
+First deploy runs `prisma migrate deploy` against an empty DB. It does **not**
+seed. Create real users by signing in (the API upserts a user row on first
+authenticated request), then bootstrap the first admin via SQL (see step 6
+above, but against the Railway DB — use its public connection string).
+
+### GitHub (frontend build config)
+
+The web build inlines its config at build time (Vite `VITE_*`). In **Settings →
+Secrets and variables → Actions**:
+
+| Kind | Name | Value |
+| --- | --- | --- |
+| **Variable** | `VITE_API_URL` | the Railway URL, e.g. `https://urlaub-production.up.railway.app` |
+| **Secret** | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (`pk_test_…`) |
+
+`deploy.yml` fails the build loudly if either is missing. Also set **Settings →
+Pages → Source = GitHub Actions**.
+
+Because the app is served under the `/Urlaub/` subpath, the frontend keeps
+routing and Clerk redirects under `import.meta.env.BASE_URL`, and a
+`public/404.html` fallback lets deep links (e.g. `/Urlaub/admin`) survive a
+direct load / refresh on static Pages hosting.
+
+### Deploy flow
+
+- **Push to `main`** → `deploy.yml` rebuilds and publishes the frontend; Railway
+  rebuilds and redeploys the API (running any new migrations).
+- **Pull requests** → `ci.yml` runs `npm test` + `npm run build` against a
+  throwaway Postgres. `main` is branch-protected on this check (required
+  approvals set to 0, so CI is the gate).
+
+### Post-deploy smoke test
+
+1. Open `https://chenyue-vago.github.io/Urlaub/` — login page loads, no console
+   CORS errors.
+2. Sign in with a company email → dashboard loads real balance data.
+3. Submit a leave request → appears as pending.
+4. As admin, approve it → status flips, audit log records it.
+5. Refresh a deep link (e.g. `/Urlaub/admin`) → loads, not a 404.
+
+Blank page → check `VITE_API_URL` / `VITE_CLERK_PUBLISHABLE_KEY` were set before
+the Pages build. CORS error → check the API's `WEB_ORIGIN` exactly equals
+`https://chenyue-vago.github.io`.

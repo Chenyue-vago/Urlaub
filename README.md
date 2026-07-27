@@ -1,45 +1,76 @@
-# Urlaubsverwaltung
+# Urlaubsverwaltung — Vacation Manager
 
-Multi-user vacation management for a company: employees request leave, admins
-approve or reject it, and everyone can see who is off on the team calendar.
-Entitlement math follows German rules — statutory + contractual days, per-state
-public holidays, pro-rated join year, and carry-over.
+Request and manage your vacation days online. Employees submit leave requests,
+admins approve or reject them, and everyone can see who's off on the shared team
+calendar. Vacation days are calculated by German rules automatically — statutory
+and contractual days, your state's public holidays, a pro-rated first year, and
+carry-over into the next year.
 
-## Stack
+## Open the app
 
-- **web** — React + Vite, Clerk for auth, TanStack Query
-- **api** — Fastify + Prisma + PostgreSQL, Clerk token verification
-- **shared** — `@urlaub/shared`: entitlement/holiday math and the HTTP wire contracts both sides import
+👉 **https://chenyue-vago.github.io/Urlaub/**
 
-npm workspaces monorepo under `packages/`.
+Sign in with your company email (`@vago-solutions.ai`). The first time you sign
+in, an account is created for you automatically.
 
-## Local development
+## For employees
 
-Requires Node 20+ and a PostgreSQL instance.
+**Set up your account (first login)**
+On your first sign-in you'll be asked for your **employment start date**. This is
+used to pro-rate your vacation entitlement for your joining year, so enter it
+accurately.
 
-```bash
-npm install
+**See your balance**
+Your dashboard shows, for the selected year, how many vacation days you're
+entitled to, how many you've used or reserved, and how many are left. Carry-over
+from the previous year is included automatically.
 
-# packages/api/.env  — see packages/api/.env.example
-#   DATABASE_URL, TEST_DATABASE_URL, CLERK_SECRET_KEY, WEB_ORIGIN, PORT,
-#   ALLOWED_EMAIL_DOMAINS
-# packages/web/.env  — see packages/web/.env.example
-#   VITE_API_URL, VITE_CLERK_PUBLISHABLE_KEY
+**Request vacation**
+1. Click **Request Vacation** and pick your start and end dates.
+2. Submit. You only choose the dates — the system automatically decides which
+   day buckets to use (soonest-to-expire first: carried-over statutory →
+   contractual → base statutory). You never pick a "type".
+3. Your request appears as **pending** and the days are reserved from your
+   balance right away.
 
-npm --workspace packages/api run prisma:migrate   # apply schema
-npm --workspace packages/api run prisma:seed      # optional demo data
+Notes:
+- Public holidays and weekends in your state are not counted as vacation days.
+- You can't request dates that overlap an existing pending or approved request.
 
-npm run dev:api    # http://localhost:3002
-npm run dev:web    # http://localhost:5173
-```
+**Cancel a request**
+You can cancel a request that hasn't started yet — whether it's still pending or
+already approved — and the days are released back to your balance. Once a
+vacation has started (by its start date) it can no longer be cancelled.
 
-Sign-in is restricted to the domains in `ALLOWED_EMAIL_DOMAINS`. New users start
-as `member`; promote to `admin` directly in the database (there is no
-self-service promotion).
+**Tidy up your dashboard**
+Cancelled entries can be hidden/removed from your own dashboard list. This only
+affects your view — the record stays intact for auditing.
 
-## Test & build
+**Team calendar**
+The **Team** view is a month calendar showing who is off and when, so you can
+plan around your colleagues.
 
-```bash
-npm test     # all workspaces (Vitest)
-npm run build
-```
+## For admins
+
+Admins get everything above, plus:
+
+- **Approvals queue** — review pending requests and **approve** or **reject**
+  them. Approving finalizes the reserved days; rejecting releases them. A request
+  that crosses a year boundary is shown as one linked group and decided together.
+- **Users** — see each person's leave records (valid pending/approved leave;
+  rejected entries are kept for audit, cancelled ones are excluded).
+- **Settings** — view and adjust the statutory/contractual day defaults and the
+  carry-over deadline.
+- **Audit log** — every approve/reject/cancel/settings change is recorded. Click
+  a row to see who did what, on which dates.
+
+New users always start as a regular **member**. Becoming an admin is done by an
+existing admin (or, for the very first admin, directly in the database).
+
+## Languages
+
+The interface is available in **English** and **Chinese (中文)**.
+
+---
+
+Running the app yourself or deploying it? See **[README-DEV.md](README-DEV.md)**.
