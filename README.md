@@ -59,10 +59,8 @@ Admins get everything above, plus:
   that crosses a year boundary is shown as one linked group and decided together.
 - **Users** — see each person's leave records (valid pending/approved leave;
   rejected entries are kept for audit, cancelled ones are excluded).
-- **Settings** — view and adjust the statutory/contractual day defaults and the
-  carry-over deadline.
-- **Audit log** — every approve/reject/cancel/settings change is recorded. Click
-  a row to see who did what, on which dates.
+- **Audit log** — every approve, reject, cancel, and role change is recorded.
+  Click a row to see who did what, on which dates.
 
 New users always start as a regular **member**. Becoming an admin is done by an
 existing admin (or, for the very first admin, directly in the database).
