@@ -69,7 +69,7 @@ existing admin (or, for the very first admin, directly in the database).
 
 ## Languages
 
-The interface is available in **English** and **German (Deutsch)**.
+The interface is available in **English** and **Chinese (中文)**.
 
 ---
 
