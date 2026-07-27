@@ -76,9 +76,8 @@ async function main() {
     update: {},
     create: {
       id: 1,
-      statutoryDays: 20,
-      contractualDays: 8,
-      carryOverDeadline: "03-31",
+      totalDays: 28,
+      carryOverDeadline: "12-31",
     },
   });
 
@@ -124,7 +123,6 @@ async function main() {
     userId: string;
     start: string;
     end: string;
-    type: "statutory" | "contractual";
     status: "approved" | "pending";
     reason: string;
     workDaysOverride?: number;
@@ -138,7 +136,6 @@ async function main() {
       startDate: new Date(opts.start),
       endDate: new Date(opts.end),
       workDays: decimalWorkDays(workDays),
-      type: opts.type,
       year: segment.year,
       isCarryOver: false,
       status: opts.status,
@@ -153,7 +150,6 @@ async function main() {
     userId: string;
     start: string;
     end: string;
-    type: "statutory" | "contractual";
     status: "approved" | "pending";
     reason: string;
   }) {
@@ -166,7 +162,6 @@ async function main() {
         startDate: new Date(segment.startDate),
         endDate: new Date(segment.endDate),
         workDays: decimalWorkDays(segment.days),
-        type: opts.type,
         year: segment.year,
         isCarryOver: false,
         status: opts.status,
@@ -183,7 +178,6 @@ async function main() {
     userId: members[0].id, // Dana
     start: "2026-07-06",
     end: "2026-07-10",
-    type: "statutory",
     status: "approved",
     reason: "Summer trip",
   });
@@ -191,7 +185,6 @@ async function main() {
     userId: members[1].id, // Chris
     start: "2026-07-13",
     end: "2026-07-17",
-    type: "contractual",
     status: "approved",
     reason: "Family visit",
   });
@@ -199,7 +192,6 @@ async function main() {
     userId: members[2].id, // Robin
     start: "2026-07-20",
     end: "2026-07-24",
-    type: "statutory",
     status: "approved",
     reason: "Beach week",
   });
@@ -207,7 +199,6 @@ async function main() {
     userId: members[3].id, // Jordan
     start: "2026-08-03",
     end: "2026-08-07",
-    type: "statutory",
     status: "approved",
     reason: "Road trip",
   });
@@ -215,7 +206,6 @@ async function main() {
     userId: members[4].id, // Taylor
     start: "2026-08-10",
     end: "2026-08-14",
-    type: "contractual",
     status: "approved",
     reason: "Wedding",
   });
@@ -223,7 +213,6 @@ async function main() {
     userId: members[5].id, // Morgan
     start: "2026-06-15",
     end: "2026-06-19",
-    type: "statutory",
     status: "approved",
     reason: "City break",
   });
@@ -232,7 +221,6 @@ async function main() {
     userId: members[6].id, // Casey
     start: "2026-07-21",
     end: "2026-07-21",
-    type: "contractual",
     status: "approved",
     reason: "Doctor's appointment",
     workDaysOverride: 0.5,
@@ -243,7 +231,6 @@ async function main() {
     userId: members[7].id, // Riley
     start: "2026-08-24",
     end: "2026-08-28",
-    type: "statutory",
     status: "pending",
     reason: "Late summer holiday",
   });
@@ -251,7 +238,6 @@ async function main() {
     userId: members[8].id, // Quinn
     start: "2026-09-07",
     end: "2026-09-09",
-    type: "contractual",
     status: "pending",
     reason: "Long weekend",
   });
@@ -261,7 +247,6 @@ async function main() {
     userId: members[0].id, // Dana
     start: "2026-12-30",
     end: "2027-01-06",
-    type: "statutory",
     status: "pending",
     reason: "New Year's trip",
   });

@@ -1,17 +1,13 @@
-// 假期类型
-export type VacationType = 'statutory' | 'contractual';
-
-// 假期记录
+// 假期记录（单一 28 天池，不再区分法定/合同类型）
 export interface VacationRecord {
   id: string;
   startDate: string; // ISO date string
   endDate: string;   // ISO date string
   workDays: number;  // 实际工作日数量（排除周末和公共假日）
-  description: string; // 仅保存用户原始备注；不再写入"（合同假期）/（法定假期）"等本地化后缀
-  type: VacationType;
+  description: string; // 用户原始备注
   /**
-   * 是否消耗的是上一年结转的法定假期。
-   * 仅在 `type === 'statutory'` 时可能为 true。展示时显示为「结转 / Carry-over」。
+   * 是否消耗的是上一年结转的假期。结转假期必须在 config.carryOverDeadline
+   * （默认次年 12-31）前休完，展示时显示为「结转 / Carry-over」。
    */
   isCarryOver?: boolean;
   year: number;      // 该假期属于哪一年的配额
@@ -26,29 +22,24 @@ export interface PublicHoliday {
   nameZh: string;   // 中文名
 }
 
-// 年度假期统计
+// 年度假期统计（单一 28 天池 + 结转）
 export interface YearlyVacationStats {
   year: number;
-  statutoryTotal: number;      // 法定假期总数
-  contractualTotal: number;    // 合同额外假期
-  statutoryUsed: number;       // 法定假期已用
-  contractualUsed: number;     // 合同额外假期已用
-  statutoryRemaining: number;  // 法定假期剩余
-  contractualRemaining: number; // 合同额外假期剩余
-  carryOver: number;           // 从上年结转的法定假期
-  carryOverUsed: number;       // 结转假期中已被使用的天数
-  carryOverExpired: number;    // 结转假期中截止日期后过期未用的天数
+  total: number;           // 当年额度（默认 28，入职当年按比例缩减）
+  used: number;            // 当年已用（含消耗结转的部分）
+  remaining: number;       // 剩余可用 = total + carryOver − used − carryOverExpired
+  carryOver: number;       // 从上年结转的天数
+  carryOverUsed: number;   // 结转天数中已被使用的部分
+  carryOverExpired: number; // 结转天数中截止日期后过期未用的部分
 }
 
-// 假期额度配置，替代原先硬编码的常量
+// 假期额度配置：单一年度总额 + 结转截止日
 export interface EntitlementConfig {
-  statutoryDays: number;    // 法定假期天数，默认 20
-  contractualDays: number;  // 合同额外假期天数，默认 8
-  carryOverDeadline: string; // 结转截止日 "MM-DD"，默认 "03-31"
+  totalDays: number;         // 年度假期总天数，默认 28
+  carryOverDeadline: string; // 结转截止日 "MM-DD"，默认次年同月日 "12-31"
 }
 
 export const DEFAULT_ENTITLEMENT: EntitlementConfig = {
-  statutoryDays: 20,
-  contractualDays: 8,
-  carryOverDeadline: '03-31',
+  totalDays: 28,
+  carryOverDeadline: '12-31',
 };

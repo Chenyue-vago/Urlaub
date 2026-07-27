@@ -54,8 +54,8 @@ export function UserRecordsModal({ user, onClose }: UserRecordsModalProps) {
                     )}
                   </span>
                   <div className="record-tags">
-                    <span className={`record-type ${record.isCarryOver ? 'carryover' : record.type}`}>
-                      {t(`type.${record.type}`)}
+                    <span className={`record-type ${record.isCarryOver ? 'carryover' : 'regular'}`}>
+                      {t(record.isCarryOver ? 'records.carryover' : 'records.regular')}
                     </span>
                     <span className={`status-badge status-${record.status}`}>
                       {t(`status.${record.status}`)}

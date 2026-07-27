@@ -50,8 +50,7 @@ function todayIso(): string {
 /**
  * Month calendar overview: one cell per day, each listing everyone whose
  * approved leave covers that day. Each person gets a stable color so they are
- * easy to track across days. Deliberately does NOT distinguish statutory vs
- * contractual — it only answers "who is off, and when".
+ * easy to track across days. It only answers "who is off, and when".
  */
 export function TeamCalendar({ entries, year, month }: TeamCalendarProps) {
   const { t, locale } = useTranslation();

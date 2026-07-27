@@ -33,8 +33,10 @@ function UserRow({ user, isSelf, onView }: UserRowProps) {
   const updateUser = useUpdateUser();
   const balance = useBalance({ userId: user.id });
 
-  const used = balance.data ? balance.data.statutoryUsed + balance.data.contractualUsed : undefined;
-  const total = balance.data ? balance.data.statutoryTotal + balance.data.contractualTotal : undefined;
+  const used = balance.data ? balance.data.used : undefined;
+  // Column header is "used this year"; the bar denominator is the full
+  // available pool (base entitlement + carry-over brought from last year).
+  const total = balance.data ? balance.data.total + balance.data.carryOver : undefined;
   const pct = total && total > 0 && used !== undefined ? Math.min(100, (used / total) * 100) : 0;
 
   const onError = (err: unknown) => {

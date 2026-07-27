@@ -4,10 +4,10 @@ import { cancelLeave, createLeave, decideLeave } from "../src/services/leave.js"
 import { getBalance } from "../src/services/balance.js";
 import { AppError } from "../src/lib/errors.js";
 
-// These transition tests assert against the statutory bucket, so pin
-// contractualDays:0 to make auto-allocation draw purely from statutory.
+// Transition tests assert against the single 28-day pool; pin totalDays:20 for
+// stable arithmetic.
 async function pendingGroup(userId: string, start = "2026-08-03", end = "2026-08-04") {
-  await makeSettings({ statutoryDays: 20, contractualDays: 0 });
+  await makeSettings({ totalDays: 20 });
   return createLeave({
     actor: { id: userId, role: "member" },
     startDate: start,
@@ -35,7 +35,7 @@ describe("decideLeave", () => {
 
     // approving frees nothing — the days still count as used
     const bal = await getBalance(prisma, member.id, 2026);
-    expect(bal.statutory.used).toBe(2);
+    expect(bal.used).toBe(2);
   });
 
   it("reject frees the reserved balance", async () => {
@@ -43,7 +43,7 @@ describe("decideLeave", () => {
     const member = await makeUser({ employmentStartDate: "2026-01-01" });
     const group = await pendingGroup(member.id);
 
-    expect((await getBalance(prisma, member.id, 2026)).statutory.used).toBe(2);
+    expect((await getBalance(prisma, member.id, 2026)).used).toBe(2);
 
     await decideLeave({
       actor: { id: admin.id, role: "admin" },
@@ -52,8 +52,8 @@ describe("decideLeave", () => {
     });
 
     const bal = await getBalance(prisma, member.id, 2026);
-    expect(bal.statutory.used).toBe(0);
-    expect(bal.statutory.available).toBe(20);
+    expect(bal.used).toBe(0);
+    expect(bal.available).toBe(20);
   });
 
   it("member cannot approve → forbidden", async () => {
@@ -109,7 +109,7 @@ describe("cancelLeave", () => {
     expect(cancelled.every((r) => r.status === "cancelled")).toBe(true);
 
     const bal = await getBalance(prisma, member.id, 2026);
-    expect(bal.statutory.used).toBe(0);
+    expect(bal.used).toBe(0);
 
     const audit = await prisma.auditLog.findMany({ where: { action: "cancel_leave" } });
     expect(audit).toHaveLength(1);

@@ -16,10 +16,9 @@ describe("GET /balance", () => {
     // web StatsCards consumes), not the service's internal nested Balance.
     const body = res.json();
     expect(body.statutory).toBeUndefined();
-    expect(body.statutoryTotal).toBe(20);
-    expect(body.statutoryUsed).toBe(0);
-    expect(body.statutoryRemaining).toBe(20);
-    expect(body.contractualTotal).toBe(8);
+    expect(body.total).toBe(28);
+    expect(body.used).toBe(0);
+    expect(body.remaining).toBe(28);
     expect(body.carryOver).toBe(0);
   });
 
@@ -45,6 +44,6 @@ describe("GET /balance", () => {
       headers: bearer(tokenFor(admin)),
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json().statutoryTotal).toBe(20);
+    expect(res.json().total).toBe(28);
   });
 });

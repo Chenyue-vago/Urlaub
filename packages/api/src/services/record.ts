@@ -26,7 +26,6 @@ export function toRecord(row: LeaveRequest): VacationRecord {
     endDate: toDateString(row.endDate),
     workDays: Number(row.workDays),
     description: row.reason,
-    type: row.type,
     isCarryOver: row.isCarryOver,
     year: row.year,
     createdAt: row.createdAt.toISOString(),
@@ -38,8 +37,7 @@ export async function loadConfig(db: Db): Promise<EntitlementConfig> {
   const settings = await db.appSettings.findUnique({ where: { id: 1 } });
   if (!settings) return DEFAULT_ENTITLEMENT;
   return {
-    statutoryDays: settings.statutoryDays,
-    contractualDays: settings.contractualDays,
+    totalDays: settings.totalDays,
     carryOverDeadline: settings.carryOverDeadline,
   };
 }

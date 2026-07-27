@@ -1,7 +1,7 @@
 import "./env-test.js"; // side-effect: must precede the db import below
 import { randomUUID } from "node:crypto";
 import { countWorkDaysByYear } from "@urlaub/shared";
-import type { LeaveStatus, LeaveType, Role } from "@prisma/client";
+import type { LeaveStatus, Role } from "@prisma/client";
 import { prisma } from "../../src/db.js";
 
 export { prisma };
@@ -14,14 +14,12 @@ export async function resetDb(): Promise<void> {
 }
 
 export function makeSettings(opts: {
-  statutoryDays?: number;
-  contractualDays?: number;
+  totalDays?: number;
   carryOverDeadline?: string;
 } = {}) {
   const data = {
-    statutoryDays: opts.statutoryDays ?? 20,
-    contractualDays: opts.contractualDays ?? 8,
-    carryOverDeadline: opts.carryOverDeadline ?? "03-31",
+    totalDays: opts.totalDays ?? 28,
+    carryOverDeadline: opts.carryOverDeadline ?? "12-31",
   };
   return prisma.appSettings.upsert({
     where: { id: 1 },
@@ -58,7 +56,7 @@ export function makeLeave(opts: {
   userId: string;
   start: string;
   end: string;
-  type?: LeaveType;
+  isCarryOver?: boolean;
   status?: LeaveStatus;
   workDays?: number;
   year?: number;
@@ -78,7 +76,7 @@ export function makeLeave(opts: {
       startDate: new Date(`${opts.start}T00:00:00.000Z`),
       endDate: new Date(`${opts.end}T00:00:00.000Z`),
       workDays,
-      type: opts.type ?? "statutory",
+      isCarryOver: opts.isCarryOver ?? false,
       year,
       status: opts.status ?? "approved",
       reason: opts.reason ?? "",

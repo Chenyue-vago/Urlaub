@@ -13,7 +13,6 @@ import type {
   UserRole,
   LeaveStatus,
 } from "@urlaub/shared";
-import type { VacationType } from "@urlaub/shared";
 
 /** A Date (or date-like) to a calendar date "YYYY-MM-DD". */
 export function toDateOnly(d: Date): string {
@@ -42,7 +41,6 @@ export function toLeaveRequestDTO(row: LeaveRequest): LeaveRequestDTO {
     startDate: toDateOnly(row.startDate),
     endDate: toDateOnly(row.endDate),
     workDays: Number(row.workDays),
-    type: row.type as VacationType,
     year: row.year,
     isCarryOver: row.isCarryOver,
     status: row.status as LeaveStatus,
@@ -64,7 +62,6 @@ export function toCalendarEntryDTO(
     userDisplayName: row.user.displayName,
     startDate: toDateOnly(row.startDate),
     endDate: toDateOnly(row.endDate),
-    type: row.type as VacationType,
     status: "approved",
   };
 }

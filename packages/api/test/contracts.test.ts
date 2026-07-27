@@ -65,7 +65,7 @@ describe("wire contracts", () => {
     expect(res.statusCode).toBe(200);
     const [entry] = res.json();
     expect(Object.keys(entry).sort()).toEqual(
-      ["endDate", "id", "startDate", "status", "type", "userDisplayName", "userId"].sort()
+      ["endDate", "id", "startDate", "status", "userDisplayName", "userId"].sort()
     );
     expect(entry.userDisplayName).toBe("Cal Person");
     expect(entry.startDate).toMatch(ISO_DATE);
@@ -79,7 +79,7 @@ describe("wire contracts", () => {
       method: "PATCH",
       url: "/settings",
       headers: bearer(tokenFor(admin)),
-      payload: { statutoryDays: 21 },
+      payload: { totalDays: 21 },
     });
 
     const res = await app.inject({

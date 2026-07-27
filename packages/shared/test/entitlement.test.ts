@@ -10,9 +10,8 @@ import {
 import { DEFAULT_ENTITLEMENT, EntitlementConfig, VacationRecord } from '../src/types.js';
 
 const CUSTOM: EntitlementConfig = {
-  statutoryDays: 25,
-  contractualDays: 5,
-  carryOverDeadline: '03-31',
+  totalDays: 30,
+  carryOverDeadline: '12-31',
 };
 
 function rec(partial: Partial<VacationRecord>): VacationRecord {
@@ -22,7 +21,6 @@ function rec(partial: Partial<VacationRecord>): VacationRecord {
     endDate: '2026-06-01',
     workDays: 1,
     description: '',
-    type: 'statutory',
     year: 2026,
     createdAt: '2026-06-01T00:00:00Z',
     ...partial,
@@ -67,52 +65,56 @@ describe('countWorkDays / public holiday exclusion', () => {
   });
 });
 
-describe('getYearlyEntitlement', () => {
-  it('returns default config values when no employment start date', () => {
-    expect(getYearlyEntitlement(2026)).toEqual({
-      statutoryTotal: 20,
-      contractualTotal: 8,
-    });
+describe('getYearlyEntitlement (single 28-day pool)', () => {
+  it('returns the default total (28) when no employment start date', () => {
+    expect(getYearlyEntitlement(2026)).toEqual({ total: 28 });
   });
 
-  it('returns custom config values when no employment start date', () => {
-    expect(getYearlyEntitlement(2026, CUSTOM)).toEqual({
-      statutoryTotal: 25,
-      contractualTotal: 5,
-    });
+  it('returns the custom total when no employment start date', () => {
+    expect(getYearlyEntitlement(2026, CUSTOM)).toEqual({ total: 30 });
   });
 
   it('is pro-rated by employment start month', () => {
     const e = getYearlyEntitlement(2026, DEFAULT_ENTITLEMENT, '2026-07-01');
-    expect(e.statutoryTotal).toBe(Math.ceil((20 * 6) / 12)); // 10
+    expect(e.total).toBe(Math.ceil((28 * 6) / 12)); // 14
   });
 
   it('config overrides hardcoded defaults', () => {
-    const e = getYearlyEntitlement(2026, { statutoryDays: 30, contractualDays: 0, carryOverDeadline: '03-31' });
-    expect(e.statutoryTotal).toBe(30);
+    const e = getYearlyEntitlement(2026, { totalDays: 30, carryOverDeadline: '12-31' });
+    expect(e.total).toBe(30);
   });
 
   it('returns zero before employment start year', () => {
-    expect(getYearlyEntitlement(2025, DEFAULT_ENTITLEMENT, '2026-07-15')).toEqual({
-      statutoryTotal: 0,
-      contractualTotal: 0,
-    });
+    expect(getYearlyEntitlement(2025, DEFAULT_ENTITLEMENT, '2026-07-15')).toEqual({ total: 0 });
   });
 });
 
-describe('calculateYearlyStats', () => {
-  it('uses injected config for totals', () => {
+describe('calculateYearlyStats (single pool)', () => {
+  it('uses injected config for the total', () => {
     const stats = calculateYearlyStats([], 2026, 0, undefined, CUSTOM);
-    expect(stats.statutoryTotal).toBe(25);
-    expect(stats.contractualTotal).toBe(5);
+    expect(stats.total).toBe(30);
   });
 
-  it('counts carry-over used only before the deadline', () => {
+  it('adds carry-over on top of the yearly total', () => {
+    // 28 base + 5 carried in = 33 available. Use 6 days before the deadline, so
+    // all 5 carried-in days are consumed (none expire) plus 1 base day.
+    const records = [rec({ workDays: 6, year: 2026 })];
+    const stats = calculateYearlyStats(records, 2026, 5);
+    expect(stats.total).toBe(28);
+    expect(stats.carryOver).toBe(5);
+    expect(stats.carryOverUsed).toBe(5);
+    expect(stats.carryOverExpired).toBe(0);
+    expect(stats.used).toBe(6);
+    expect(stats.remaining).toBe(33 - 6); // 27
+  });
+
+  it('counts carry-over used only before the deadline (default 12-31)', () => {
+    // Carried-in days must be consumed by Dec 31; a request dated in the
+    // following year does not draw down THIS year's carry-over.
     const records = [
-      rec({ startDate: '2026-02-01', endDate: '2026-02-01', workDays: 3, year: 2026 }),
-      rec({ id: 'r2', startDate: '2026-05-01', endDate: '2026-05-01', workDays: 2, year: 2026 }),
+      rec({ startDate: '2026-06-01', endDate: '2026-06-01', workDays: 3, year: 2026 }),
     ];
-    const stats = calculateYearlyStats(records, 2026, 4, undefined);
+    const stats = calculateYearlyStats(records, 2026, 4);
     expect(stats.carryOverUsed).toBe(3);
     expect(stats.carryOverExpired).toBe(1);
   });
@@ -128,26 +130,25 @@ describe('calculateYearlyStats', () => {
 });
 
 describe('isWithinCarryOverPeriod', () => {
-  it('uses the default 03-31 deadline when no config is given', () => {
-    expect(isWithinCarryOverPeriod(2025, new Date(2026, 2, 31))).toBe(true);
-    expect(isWithinCarryOverPeriod(2025, new Date(2026, 3, 1))).toBe(false);
+  it('uses the default 12-31 deadline when no config is given', () => {
+    // Carried from 2025 → usable through 2026-12-31.
+    expect(isWithinCarryOverPeriod(2025, new Date(2026, 11, 31))).toBe(true);
+    expect(isWithinCarryOverPeriod(2025, new Date(2027, 0, 1))).toBe(false);
   });
 
   it('respects a custom carry-over deadline from config', () => {
     const config: EntitlementConfig = { ...DEFAULT_ENTITLEMENT, carryOverDeadline: '06-30' };
-    // 04-01 would already be past the default 03-31 deadline, but is still
-    // within a custom 06-30 deadline.
-    expect(isWithinCarryOverPeriod(2025, new Date(2026, 3, 1), config)).toBe(true);
+    expect(isWithinCarryOverPeriod(2025, new Date(2026, 5, 30), config)).toBe(true);
     expect(isWithinCarryOverPeriod(2025, new Date(2026, 6, 1), config)).toBe(false);
   });
 });
 
 describe('calculateCarryOver', () => {
-  it('carries over unused statutory days', () => {
+  it('carries over all unused days (no type distinction)', () => {
     const records = [
       rec({ startDate: '2025-08-01', endDate: '2025-08-01', workDays: 15, year: 2025 }),
     ];
-    // 20 statutory - 15 used = 5 carried into 2026
-    expect(calculateCarryOver(records, 2025)).toBe(5);
+    // 28 total - 15 used = 13 carried into the next year.
+    expect(calculateCarryOver(records, 2025)).toBe(13);
   });
 });

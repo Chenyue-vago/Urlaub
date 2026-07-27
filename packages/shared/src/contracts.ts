@@ -5,7 +5,6 @@
 // Date conventions on the wire:
 //   IsoDate      — a calendar date with no time, "YYYY-MM-DD" (Postgres @db.Date)
 //   IsoTimestamp — a full instant, ISO-8601 "YYYY-MM-DDTHH:mm:ss.sssZ"
-import type { VacationType } from './types.js';
 
 /** "YYYY-MM-DD" (no time component). */
 export type IsoDate = string;
@@ -36,7 +35,6 @@ export interface LeaveRequestDTO {
   startDate: IsoDate;
   endDate: IsoDate;
   workDays: number;
-  type: VacationType;
   year: number;
   isCarryOver: boolean;
   status: LeaveStatus;
@@ -55,7 +53,6 @@ export interface CalendarEntryDTO {
   userDisplayName: string | null;
   startDate: IsoDate;
   endDate: IsoDate;
-  type: VacationType;
   status: 'approved';
 }
 

@@ -46,13 +46,8 @@ export function RecordList({
       ) : (
         <div className="records-list">
           {sorted.map((record) => {
-            const kind = record.isCarryOver ? 'carryover' : record.type;
-            const kindLabelKey =
-              kind === 'carryover'
-                ? 'records.carryover'
-                : kind === 'contractual'
-                  ? 'records.contractual'
-                  : 'records.statutory';
+            const kind = record.isCarryOver ? 'carryover' : 'regular';
+            const kindLabelKey = kind === 'carryover' ? 'records.carryover' : 'records.regular';
             return (
               <div key={record.id} className="record-card" data-testid="leave-record">
                 <div className="record-row-main">

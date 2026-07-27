@@ -7,7 +7,7 @@ import { decideLeave, cancelLeave } from "../src/services/leave.js";
 // the underlying group later changes.
 describe("leave decision audit metadata carries a date snapshot", () => {
   async function pendingGroup(userId: string, start: string, end: string) {
-    await makeSettings({ statutoryDays: 30, contractualDays: 0 });
+    await makeSettings({ totalDays: 30 });
     return makeLeave({ userId, start, end, status: "pending", year: Number(start.slice(0, 4)) });
   }
 

@@ -52,7 +52,7 @@ describe("admin service", () => {
 
   it("getSettings sends GET /settings", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      jsonResponse({ statutoryDays: 20 })
+      jsonResponse({ totalDays: 28 })
     );
     const api = createApi(async () => "tok");
     await getSettings(api);
@@ -63,14 +63,14 @@ describe("admin service", () => {
 
   it("updateSettings sends PATCH /settings with JSON body", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      jsonResponse({ statutoryDays: 22 })
+      jsonResponse({ totalDays: 28 })
     );
     const api = createApi(async () => "tok");
-    await updateSettings(api, { statutoryDays: 22 });
+    await updateSettings(api, { totalDays: 28 });
     const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(String(url)).toContain("/settings");
     expect(init.method).toBe("PATCH");
-    expect(JSON.parse(init.body)).toEqual({ statutoryDays: 22 });
+    expect(JSON.parse(init.body)).toEqual({ totalDays: 28 });
   });
 
   it("getAuditLog sends GET /admin/audit-log with limit and cursor query params", async () => {
