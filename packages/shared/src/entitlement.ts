@@ -180,13 +180,26 @@ export function isWithinCarryOverPeriod(
   return currentDate <= carryOverDeadline;
 }
 
-// 计算结转到下一年的假期：当年全部未用天数（无类型区分、无上限）
+// 计算结转到下一年的假期。规则（不链式结转）：只有当年【基础额度】未用完的
+// 部分能滚到下一年；从上一年结转进来的天数（`carryInFromPreviousYear`）当年
+// 不用就在截止日过期，不再向后链式结转。由于申请优先消耗结转（见
+// `allocateLeaveDays`），当年用量先抵扣结转额度，剩余用量才抵扣基础额度。
+// 因此：基础额度已用 = max(0, used − carryOverUsed)，结转出去 = total − 该值。
+// 无天数上限。
 export function calculateCarryOver(
   records: VacationRecord[],
   fromYear: number,
   employmentStartDate?: string,
-  config: EntitlementConfig = DEFAULT_ENTITLEMENT
+  config: EntitlementConfig = DEFAULT_ENTITLEMENT,
+  carryInFromPreviousYear: number = 0
 ): number {
-  const stats = calculateYearlyStats(records, fromYear, 0, employmentStartDate, config);
-  return stats.remaining;
+  const stats = calculateYearlyStats(
+    records,
+    fromYear,
+    carryInFromPreviousYear,
+    employmentStartDate,
+    config
+  );
+  const baseUsed = Math.max(0, stats.used - stats.carryOverUsed);
+  return Math.max(0, stats.total - baseUsed);
 }

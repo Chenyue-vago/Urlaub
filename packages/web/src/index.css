@@ -379,18 +379,12 @@ body {
 .progress-fill {
   position: absolute;
   top: 0;
+  left: 0;
   height: 100%;
   border-radius: var(--radius-full);
   transition: width 0.5s ease;
-}
-
-.progress-fill.statutory {
-  background: linear-gradient(90deg, var(--color-statutory), var(--color-statutory-light));
-  left: 0;
-}
-
-.progress-fill.contractual {
-  background: linear-gradient(90deg, var(--color-contractual), var(--color-contractual-light));
+  /* Single pool: one green "used" fill. */
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
 }
 
 .progress-labels {
@@ -890,20 +884,24 @@ body {
   width: fit-content;
 }
 
-.record-type.statutory {
-  background: var(--color-statutory-light);
-  color: var(--color-statutory);
+/* Regular vacation: understated, neutral — it's the default, not the story. */
+.record-type.regular {
+  background: var(--color-surface-2, #eef0ee);
+  color: var(--color-text-muted, #5b6b5e);
 }
 
-.record-type.contractual {
-  background: var(--color-contractual-light);
-  color: var(--color-contractual);
-}
-
+/* Carry-over: prominent amber "use-it-or-lose-it" treatment so users clearly
+   see which days are drawn from perishable carried-over leave. The ↩ marker is
+   added via ::before so it reads at a glance. */
 .record-type.carryover {
-  background: #e8f5e9;
-  color: #2e7d32;
-  border: 1px solid #2e7d3233;
+  background: #fff3e0;
+  color: #b26a00;
+  border: 1px solid #b26a0055;
+}
+
+.record-type.carryover::before {
+  content: "↩ ";
+  font-weight: 700;
 }
 
 .record-year {

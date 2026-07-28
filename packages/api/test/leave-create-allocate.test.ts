@@ -26,10 +26,11 @@ describe("createLeave auto-allocation (single pool)", () => {
   });
 
   it("consumes carry-over first, then base, splitting one segment into two rows", async () => {
-    // Entitlement is a single 28-day pool read from global settings for every
-    // year, so to carry exactly 2 days into 2026 we USE 26 of 2025's 28.
+    // Employment starts in 2025 → 2025 is the first year with no prior carry-in,
+    // so using 26 of its 28 days carries exactly 2 into 2026 (clean isolation;
+    // no earlier years silently carrying a full allowance forward).
     await makeSettings({ totalDays: 28, carryOverDeadline: "12-31" });
-    const user = await makeUser({ employmentStartDate: "2020-01-01" });
+    const user = await makeUser({ employmentStartDate: "2025-01-01" });
     await makeLeave({
       userId: user.id,
       start: "2025-06-02",
@@ -58,6 +59,32 @@ describe("createLeave auto-allocation (single pool)", () => {
     ]);
     // all rows share one groupId
     expect(new Set(group.map((r) => r.groupId)).size).toBe(1);
+  });
+
+  it("does not over-draw carry-over across multiple requests", async () => {
+    // 2025 (first year) uses 26 of 28 → exactly 2 carry into 2026.
+    await makeSettings({ totalDays: 28, carryOverDeadline: "12-31" });
+    const user = await makeUser({ employmentStartDate: "2025-01-01" });
+    await makeLeave({
+      userId: user.id, start: "2025-06-02", end: "2025-06-02",
+      status: "approved", workDays: 26, year: 2025,
+    });
+
+    // First 2026 request spends both carry-over days.
+    const first = await createLeave({
+      actor: { id: user.id, role: "member" },
+      startDate: "2026-03-02", endDate: "2026-03-03", // 2 workdays
+      reason: "",
+    });
+    expect(first.filter((r) => r.isCarryOver).reduce((s, r) => s + Number(r.workDays), 0)).toBe(2);
+
+    // Second request must NOT pull any more carry-over (it's exhausted).
+    const second = await createLeave({
+      actor: { id: user.id, role: "member" },
+      startDate: "2026-04-06", endDate: "2026-04-08", // 3 workdays
+      reason: "",
+    });
+    expect(second.every((r) => r.isCarryOver === false)).toBe(true);
   });
 
   it("does not consume carry-over when the leave ends after the deadline", async () => {

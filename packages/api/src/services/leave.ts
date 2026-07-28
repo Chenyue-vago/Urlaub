@@ -95,10 +95,14 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
           // row (differing only in isCarryOver), never by leave type.
           const balance = await getBalance(tx, targetUserId, seg.year);
           // Split the available pool into its perishable carry-over part
-          // (consumed first) and the base part.
+          // (consumed first) and the base part. Carry-over still available is
+          // the total carried in MINUS what earlier requests already spent from
+          // it — otherwise every request would think the full carry-over is free
+          // and over-draw it.
+          const carryOverRemaining = Math.max(0, balance.carryOver - balance.carryOverUsed);
           const carryOverAvailable = Math.max(
             0,
-            Math.min(balance.carryOver, balance.available)
+            Math.min(carryOverRemaining, balance.available)
           );
           const baseAvailable = Math.max(0, balance.available - carryOverAvailable);
 

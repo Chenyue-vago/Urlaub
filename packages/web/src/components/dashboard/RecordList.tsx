@@ -46,8 +46,6 @@ export function RecordList({
       ) : (
         <div className="records-list">
           {sorted.map((record) => {
-            const kind = record.isCarryOver ? 'carryover' : 'regular';
-            const kindLabelKey = kind === 'carryover' ? 'records.carryover' : 'records.regular';
             return (
               <div key={record.id} className="record-card" data-testid="leave-record">
                 <div className="record-row-main">
@@ -59,7 +57,11 @@ export function RecordList({
                       )}
                     </span>
                     <div className="record-tags">
-                      <span className={`record-type ${kind}`}>{t(kindLabelKey)}</span>
+                      {/* Only carry-over is worth flagging; a plain "vacation"
+                          tag carries no information, so regular days get none. */}
+                      {record.isCarryOver && (
+                        <span className="record-type carryover">{t('records.carryover')}</span>
+                      )}
                       <span
                         className={`status-badge status-${record.status}`}
                         data-testid="status-badge"

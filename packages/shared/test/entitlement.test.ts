@@ -151,4 +151,24 @@ describe('calculateCarryOver', () => {
     // 28 total - 15 used = 13 carried into the next year.
     expect(calculateCarryOver(records, 2025)).toBe(13);
   });
+
+  it('does NOT chain carry-over: only the base allowance can roll forward', () => {
+    // 2026 has 28 base + 9 carried in from 2025, and 21 days are used.
+    // Requests consume carry-over first, so the 9 carried-in days are used up
+    // and 12 base days are used. Only the base leftover (28 - 12 = 16) rolls
+    // into 2027 — the carried-in days do NOT chain forward.
+    const records = [
+      rec({ startDate: '2026-06-01', endDate: '2026-06-01', workDays: 21, year: 2026 }),
+    ];
+    expect(calculateCarryOver(records, 2026, undefined, DEFAULT_ENTITLEMENT, 9)).toBe(16);
+  });
+
+  it('carried-in days unused by the deadline expire, not carry forward', () => {
+    // 28 base + 9 carried in; only 5 days used. Carry-over-first consumes 5 of
+    // the 9 carried-in (4 expire), base untouched → 28 base rolls to next year.
+    const records = [
+      rec({ startDate: '2026-06-01', endDate: '2026-06-01', workDays: 5, year: 2026 }),
+    ];
+    expect(calculateCarryOver(records, 2026, undefined, DEFAULT_ENTITLEMENT, 9)).toBe(28);
+  });
 });

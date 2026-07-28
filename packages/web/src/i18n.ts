@@ -51,7 +51,7 @@ const zh: Dict = {
   'stats.remainingLabel': '剩余假期',
   'stats.daysShort': '{n} 天',
   'stats.totalDays': '总额 {n} 天',
-  'stats.includesCarryOver': '（含结转 {n} 天）',
+  'stats.includesCarryOver': '（{base} 天 + 结转 {n} 天）',
   'stats.expiredCarryOver': '，已过期 {n} 天',
   'stats.carryoverHint': '未休完的天数结转至次年，可休至次年12月31日',
 
@@ -249,7 +249,7 @@ const en: Dict = {
   'stats.remainingLabel': 'Remaining',
   'stats.daysShort': '{n} days',
   'stats.totalDays': 'Total {n} days',
-  'stats.includesCarryOver': ' (incl. {n} carried over)',
+  'stats.includesCarryOver': ' ({base} + {n} carried over)',
   'stats.expiredCarryOver': ', {n} expired',
   'stats.carryoverHint': 'Unused days carry over and can be taken until Dec 31 of the next year',
 

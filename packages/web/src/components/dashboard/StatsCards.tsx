@@ -40,8 +40,9 @@ export function StatsCards({ stats }: StatsCardsProps) {
           <span className="stat-label">{t('stats.remainingLabel')}</span>
           <span className="stat-value">{t('stats.daysShort', { n: stats.remaining })}</span>
           <span className="stat-sublabel">
-            {t('stats.totalDays', { n: stats.total })}
-            {stats.carryOver > 0 && t('stats.includesCarryOver', { n: stats.carryOver })}
+            {/* Total available = base entitlement + carry-over (e.g. 37 = 28 + 9). */}
+            {t('stats.totalDays', { n: totalAvailable })}
+            {stats.carryOver > 0 && t('stats.includesCarryOver', { n: stats.carryOver, base: stats.total })}
             {stats.carryOverExpired > 0 && t('stats.expiredCarryOver', { n: stats.carryOverExpired })}
           </span>
         </div>
