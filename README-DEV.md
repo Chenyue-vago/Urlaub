@@ -213,3 +213,51 @@ direct load / refresh on static Pages hosting.
 Blank page → check `VITE_API_URL` / `VITE_CLERK_PUBLISHABLE_KEY` were set before
 the Pages build. CORS error → check the API's `WEB_ORIGIN` exactly equals
 `https://chenyue-vago.github.io`.
+
+## Troubleshooting: "Failed to load, please try again"
+
+The dashboard shows this generic error whenever a data request fails, and it has
+had a **different root cause almost every time** — don't guess, work top-down.
+It's almost always the **API side** (the page shell renders, then a `fetch`
+fails). The auth layer collapses every failure into a bare `401`, and the two
+`catch {}` blocks in `packages/api/src/auth/clerk.ts` swallow the real reason.
+
+1. **Is the API running?** (most common locally: a clean build that runs
+   `rm -rf packages/*/dist node_modules/.prisma` kills the `tsx watch` API while
+   the Vite server survives — so the page loads but every request fails.)
+   ```bash
+   curl -s -w ' [%{http_code}]\n' http://localhost:3002/health   # want [200]
+   ```
+   Down → `npm run build:shared && npm run prisma:generate` (if dist was wiped),
+   then `cd packages/api && PORT=3002 npx tsx watch src/server.ts`.
+
+2. **Is it a 401 or a 500?** DevTools → Network → click Retry → inspect the red
+   `me`/`balance` request. 401 → auth (steps 3–4). 500 → DB/schema (step 5).
+   `net::ERR`/CORS → step 6.
+
+3. **Is `CLERK_SECRET_KEY` valid?** (a stale/revoked key in `packages/api/.env`
+   has bitten us more than once). Ask Clerk — status only, never echo the key:
+   ```bash
+   key=$(grep '^CLERK_SECRET_KEY=' packages/api/.env | cut -d= -f2-)
+   curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $key" \
+     https://api.clerk.com/v1/users?limit=1        # 200 = valid, 401 = replace it
+   ```
+   Rotating a key in the Clerk dashboard does **not** update `.env` — paste the
+   new key in yourself and **restart the API** (`.env` is read at startup).
+
+4. **Reveal the swallowed error.** Temporarily log `e.message` in the two
+   `catch` blocks of `auth/clerk.ts`, hit Retry, read the API log. Typical:
+   `Secret Key is invalid` (step 3), `token is expired` (stale session → sign
+   out/in), `kid`/issuer mismatch (front/back on different Clerk instances).
+   Remove the logging afterward.
+
+5. **500s** → Postgres reachable on `localhost:5432`? Schema current
+   (`npx prisma migrate deploy`)? A pending migration shows as `Unknown
+   column`/type errors on business routes.
+
+6. **CORS** → `curl -si -H "Origin: http://localhost:5173" http://localhost:3002/me | grep -i access-control`.
+   No header → backend `WEB_ORIGIN` must match the web origin exactly.
+
+**Prevention:** stop the dev servers before a clean full-suite run
+(`rm -rf packages/*/dist …`) and restart the API afterward — otherwise you'll
+"discover" a Failed-to-load that you caused.
