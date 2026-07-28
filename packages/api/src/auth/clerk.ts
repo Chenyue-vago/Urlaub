@@ -21,7 +21,11 @@ export class ClerkAuthenticator implements Authenticator {
         throw new Error("token payload missing sub");
       }
       clerkId = payload.sub;
-    } catch {
+    } catch (e) {
+      // Log the real reason (e.g. "Secret Key is invalid", token expired) — the
+      // client only ever sees a bare 401, so without this the cause is
+      // invisible. Message only; never log the token or secret key.
+      console.error("[auth] token verification failed:", (e as Error)?.message);
       throw new AppError("Unauthenticated", "unauthenticated", 401);
     }
 
@@ -36,7 +40,10 @@ export class ClerkAuthenticator implements Authenticator {
         throw new Error("clerk user has no email address");
       }
       return { clerkId, email };
-    } catch {
+    } catch (e) {
+      // Token verified but the user lookup failed (revoked key, deleted user,
+      // Clerk API error, or no email on the account). Surface the reason.
+      console.error("[auth] user lookup failed:", (e as Error)?.message);
       throw new AppError("Unauthenticated", "unauthenticated", 401);
     }
   }
