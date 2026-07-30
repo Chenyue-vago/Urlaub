@@ -3,6 +3,7 @@ import type { User } from "@prisma/client";
 import { prisma } from "../db.js";
 import { AppError } from "../lib/errors.js";
 import { env } from "../env.js";
+import { Sentry } from "../sentry.js";
 import type { AuthIdentity, Authenticator } from "./types.js";
 
 /**
@@ -92,6 +93,9 @@ export async function requireAuth(req: FastifyRequest, _reply: FastifyReply): Pr
   const token = extractBearerToken(req);
   const identity = await req.server.authenticator.authenticate(token);
   req.user = await resolveUser(identity);
+  // Tag any error raised while handling this request with who hit it. No-op
+  // when Sentry isn't initialised (no DSN).
+  Sentry.setUser({ id: req.user.id, email: req.user.email });
 }
 
 export async function requireAdmin(req: FastifyRequest, _reply: FastifyReply): Promise<void> {

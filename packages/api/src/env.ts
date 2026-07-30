@@ -18,6 +18,9 @@ const envSchema = z.object({
   // domain; override locally (e.g. to add gmail.com for a personal demo account)
   // via packages/api/.env. See resolveUser in auth/context.ts.
   ALLOWED_EMAIL_DOMAINS: z.string().default("vago-solutions.ai"),
+  // Error/performance tracking. Unset locally/in tests → Sentry is a no-op.
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_ENVIRONMENT: z.string().default("development"),
 });
 
 const parsed = envSchema.safeParse(process.env);
