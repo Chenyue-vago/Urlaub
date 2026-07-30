@@ -12,7 +12,6 @@ function record(over: Partial<LeaveRequestResponse>): LeaveRequestResponse {
     startDate: '2100-01-01',
     endDate: '2100-01-05',
     workDays: 3,
-    type: 'statutory',
     year: 2100,
     isCarryOver: false,
     status: 'approved',

@@ -12,10 +12,6 @@ enum Role {
   member
 }
 
-enum LeaveType {
-  statutory
-  contractual
-}
 
 enum LeaveStatus {
   pending
@@ -58,7 +54,6 @@ model LeaveRequest {
   startDate     DateTime    @map("start_date") @db.Date
   endDate       DateTime    @map("end_date") @db.Date
   workDays      Decimal     @map("work_days") @db.Decimal(4, 1)
-  type          LeaveType
   year          Int
   isCarryOver   Boolean     @default(false) @map("is_carry_over")
   // Soft per-user hide: a member may dismiss a CANCELLED group from their own
@@ -82,9 +77,8 @@ model LeaveRequest {
 
 model AppSettings {
   id                Int      @id @default(1)
-  statutoryDays     Int      @default(20) @map("statutory_days")
-  contractualDays   Int      @default(8) @map("contractual_days")
-  carryOverDeadline String   @default("03-31") @map("carry_over_deadline")
+  totalDays         Int      @default(28) @map("total_days")
+  carryOverDeadline String   @default("12-31") @map("carry_over_deadline")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")

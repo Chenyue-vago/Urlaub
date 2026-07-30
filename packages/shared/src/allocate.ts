@@ -1,33 +1,31 @@
 import { EntitlementConfig, DEFAULT_ENTITLEMENT } from './types.js';
 
 export interface BucketAvailability {
-  /** Prior-year statutory days carried over, still available this year. */
+  /** Prior-year days carried over, still available this year (perishable). */
   carryOverAvailable: number;
-  /** Contractual entitlement remaining this year. */
-  contractualAvailable: number;
-  /** Base (non-carry-over) statutory entitlement remaining this year. */
-  statutoryAvailable: number;
+  /** Base entitlement remaining this year. */
+  baseAvailable: number;
 }
 
 export interface Allocation {
-  type: 'statutory' | 'contractual';
+  /** True when these days consume perishable carry-over from the prior year. */
   isCarryOver: boolean;
   days: number;
 }
 
 /**
- * Split `days` (the work-days of one calendar-year segment) across the three
- * balance buckets in the order that is best for the employee — soonest-to-
- * expire first, so use-it-or-lose-it days are never wasted:
+ * Split `days` (the work-days of one calendar-year segment) across the single
+ * 28-day pool, consuming perishable carry-over first so use-it-or-lose-it days
+ * are never wasted:
  *
- *   1. carried-over statutory  (expires on the carry-over deadline, e.g. 03-31)
- *      — only when the leave ends on/before that deadline
- *   2. contractual             (expires at year end, cannot carry over)
- *   3. base statutory          (least perishable; itself can carry over)
+ *   1. carried-over days — expire on the carry-over deadline (default 12-31 of
+ *      the segment's own year); only usable when the leave ends on/before it
+ *   2. base entitlement  — the current year's allowance
  *
- * Returns the non-zero allocations and any `shortfall` (days that no bucket
- * could cover — the caller turns this into an insufficient-balance error).
- * Pure: no I/O, deterministic in its inputs.
+ * A segment yields at most two allocations (a carry-over row and/or a base
+ * row). Returns the non-zero allocations and any `shortfall` (days neither
+ * source could cover — the caller turns this into an insufficient-balance
+ * error). Pure: no I/O, deterministic in its inputs.
  */
 export function allocateLeaveDays(
   days: number,
@@ -43,30 +41,20 @@ export function allocateLeaveDays(
   const carryOverDeadline = `${year}-${config.carryOverDeadline}`;
   const carryOverEligible = periodEndDate <= carryOverDeadline;
 
-  // 1) Carried-over statutory (most perishable), only if the leave ends before
-  //    the deadline.
+  // 1) Perishable carry-over first, only if the leave ends on/before the deadline.
   if (carryOverEligible && avail.carryOverAvailable > 0) {
     const take = Math.min(avail.carryOverAvailable, remaining);
     if (take > 0) {
-      allocations.push({ type: 'statutory', isCarryOver: true, days: take });
+      allocations.push({ isCarryOver: true, days: take });
       remaining -= take;
     }
   }
 
-  // 2) Contractual next.
-  if (avail.contractualAvailable > 0 && remaining > 0) {
-    const take = Math.min(avail.contractualAvailable, remaining);
+  // 2) Base entitlement.
+  if (avail.baseAvailable > 0 && remaining > 0) {
+    const take = Math.min(avail.baseAvailable, remaining);
     if (take > 0) {
-      allocations.push({ type: 'contractual', isCarryOver: false, days: take });
-      remaining -= take;
-    }
-  }
-
-  // 3) Base statutory last.
-  if (avail.statutoryAvailable > 0 && remaining > 0) {
-    const take = Math.min(avail.statutoryAvailable, remaining);
-    if (take > 0) {
-      allocations.push({ type: 'statutory', isCarryOver: false, days: take });
+      allocations.push({ isCarryOver: false, days: take });
       remaining -= take;
     }
   }

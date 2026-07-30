@@ -32,22 +32,20 @@ export async function balanceRoutes(app: FastifyInstance): Promise<void> {
 }
 
 /**
- * Map the service's internal nested Balance to the shared flat
- * YearlyVacationStats — the contract the web client (StatsCards) consumes.
- * `statutoryTotal` includes carried-over days, matching the shared math.
- * The backend does not model carry-over expiry, so carryOverExpired is 0.
+ * Map the service's internal Balance to the shared flat YearlyVacationStats —
+ * the contract the web client (StatsCards) consumes. `total` is the base yearly
+ * entitlement; carried-over days are reported separately and added into
+ * `remaining`. The backend does not model carry-over expiry, so
+ * carryOverExpired is 0.
  */
 function toYearlyVacationStats(b: Balance): YearlyVacationStats {
   return {
     year: b.year,
-    statutoryTotal: b.statutory.total + b.statutory.carryOver,
-    contractualTotal: b.contractual.total,
-    statutoryUsed: b.statutory.used,
-    contractualUsed: b.contractual.used,
-    statutoryRemaining: b.statutory.available,
-    contractualRemaining: b.contractual.available,
-    carryOver: b.statutory.carryOver,
-    carryOverUsed: Math.min(b.statutory.carryOver, b.statutory.used),
+    total: b.total,
+    used: b.used,
+    remaining: b.available,
+    carryOver: b.carryOver,
+    carryOverUsed: Math.min(b.carryOver, b.used),
     carryOverExpired: 0,
   };
 }

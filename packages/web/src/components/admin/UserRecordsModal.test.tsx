@@ -26,7 +26,6 @@ function rec(over: Record<string, unknown>) {
     startDate: "2026-08-10",
     endDate: "2026-08-14",
     workDays: 5,
-    type: "statutory",
     year: 2026,
     isCarryOver: false,
     status: "approved",

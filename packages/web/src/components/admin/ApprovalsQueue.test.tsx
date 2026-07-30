@@ -40,7 +40,6 @@ const pendingRecord = {
   startDate: "2026-08-10",
   endDate: "2026-08-14",
   workDays: 5,
-  type: "statutory" as const,
   year: 2026,
   isCarryOver: false,
   status: "pending" as const,

@@ -16,7 +16,7 @@ interface ApprovalGroup {
   startDate: string;
   endDate: string;
   workDays: number;
-  type: LeaveRequestResponse['type'];
+  isCarryOver: boolean;
   reason: string;
 }
 
@@ -40,7 +40,7 @@ function groupByGroupId(records: LeaveRequestResponse[]): ApprovalGroup[] {
         startDate,
         endDate,
         workDays,
-        type: sorted[0].type,
+        isCarryOver: sorted.some((item) => item.isCarryOver),
         reason: sorted[0].reason,
       };
     })
@@ -140,7 +140,9 @@ export function ApprovalsQueue() {
                   <span className="admin-approval-name">
                     {nameByUserId.get(group.userId) ?? group.userId}
                   </span>
-                  <span className={`record-type ${group.type}`}>{t(`type.${group.type}`)}</span>
+                  {group.isCarryOver && (
+                    <span className="record-type carryover">{t('records.carryover')}</span>
+                  )}
                 </div>
                 <div className="admin-approval-dates">
                   {formatDisplayDate(group.startDate)}

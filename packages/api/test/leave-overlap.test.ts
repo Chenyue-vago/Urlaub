@@ -7,7 +7,7 @@ import { createLeave } from "../src/services/leave.js";
 // the same user. Rejected/cancelled requests free their dates for re-use.
 describe("createLeave overlap guard", () => {
   async function member() {
-    await makeSettings({ statutoryDays: 30, contractualDays: 10 });
+    await makeSettings({ totalDays: 40 });
     return makeUser({ employmentStartDate: "2020-01-01" });
   }
 

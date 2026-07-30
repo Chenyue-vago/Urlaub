@@ -90,27 +90,26 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
 
           // Reservation check against the SAME tx client so the read + insert
           // are atomic (Serializable turns the read into a predicate lock).
-          // The system auto-allocates the segment's days across buckets in the
-          // order best for the employee (soonest-to-expire first): carried-over
-          // statutory -> contractual -> base statutory. One segment may split
-          // into several rows of different type/isCarryOver.
+          // The system consumes perishable carry-over first, then the base
+          // 28-day pool. One segment may split into a carry-over row and a base
+          // row (differing only in isCarryOver), never by leave type.
           const balance = await getBalance(tx, targetUserId, seg.year);
-          // Split the statutory `available` into its perishable carry-over part
-          // (consumed first) and the base part.
+          // Split the available pool into its perishable carry-over part
+          // (consumed first) and the base part. Carry-over still available is
+          // the total carried in MINUS what earlier requests already spent from
+          // it — otherwise every request would think the full carry-over is free
+          // and over-draw it.
+          const carryOverRemaining = Math.max(0, balance.carryOver - balance.carryOverUsed);
           const carryOverAvailable = Math.max(
             0,
-            Math.min(balance.statutory.carryOver, balance.statutory.available)
+            Math.min(carryOverRemaining, balance.available)
           );
-          const statutoryAvailable = Math.max(0, balance.statutory.available - carryOverAvailable);
+          const baseAvailable = Math.max(0, balance.available - carryOverAvailable);
 
           const { allocations, shortfall } = allocateLeaveDays(
             seg.days,
             seg.endDate,
-            {
-              carryOverAvailable,
-              contractualAvailable: balance.contractual.available,
-              statutoryAvailable,
-            },
+            { carryOverAvailable, baseAvailable },
             config
           );
           if (shortfall > 0) {
@@ -125,7 +124,6 @@ export async function createLeave(input: CreateLeaveInput): Promise<LeaveRequest
                 startDate: toDate(seg.startDate),
                 endDate: toDate(seg.endDate),
                 workDays: new Prisma.Decimal(alloc.days),
-                type: alloc.type,
                 isCarryOver: alloc.isCarryOver,
                 year: seg.year,
                 status,

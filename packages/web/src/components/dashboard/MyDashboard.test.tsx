@@ -50,12 +50,9 @@ const meResponse = {
 
 const balanceResponse = {
   year: 2026,
-  statutoryTotal: 20,
-  contractualTotal: 8,
-  statutoryUsed: 0,
-  contractualUsed: 0,
-  statutoryRemaining: 20,
-  contractualRemaining: 8,
+  total: 28,
+  used: 0,
+  remaining: 28,
   carryOver: 0,
   carryOverUsed: 0,
   carryOverExpired: 0,
@@ -99,7 +96,6 @@ describe("request → status flow", () => {
       startDate: "2026-07-06",
       endDate: "2026-07-07",
       workDays: 2,
-      type: "statutory",
       year: 2026,
       isCarryOver: false,
       status: "pending",

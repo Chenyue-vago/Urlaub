@@ -13,12 +13,12 @@ function jsonResponse(body: unknown, status = 200) {
 describe("balance service", () => {
   it("getBalance sends GET /balance with year and userId query params", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      jsonResponse({ year: 2026, statutoryRemaining: 10 })
+      jsonResponse({ year: 2026, remaining: 10 })
     );
     const api = createApi(async () => "tok");
     const result = await getBalance(api, { year: 2026, userId: "u1" });
 
-    expect(result).toEqual({ year: 2026, statutoryRemaining: 10 });
+    expect(result).toEqual({ year: 2026, remaining: 10 });
     const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const parsed = new URL(String(url));
     expect(parsed.pathname).toContain("/balance");

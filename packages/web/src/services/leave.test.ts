@@ -41,7 +41,7 @@ describe("leave service", () => {
       jsonResponse([{ id: "lr1", status: "pending" }], 201)
     );
     const api = createApi(async () => "tok");
-    const payload = { startDate: "2026-03-04", endDate: "2026-03-05", type: "statutory" as const };
+    const payload = { startDate: "2026-03-04", endDate: "2026-03-05" };
     const result = await createLeaveRequest(api, payload);
 
     expect(result).toEqual([{ id: "lr1", status: "pending" }]);
@@ -56,7 +56,7 @@ describe("leave service", () => {
       jsonResponse({ error: "Insufficient balance", code: "insufficient_balance" }, 409)
     );
     const api = createApi(async () => "tok");
-    const payload = { startDate: "2026-03-04", endDate: "2026-03-05", type: "statutory" as const };
+    const payload = { startDate: "2026-03-04", endDate: "2026-03-05" };
 
     await expect(createLeaveRequest(api, payload)).rejects.toBeInstanceOf(ApiError);
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(

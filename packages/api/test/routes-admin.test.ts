@@ -53,7 +53,7 @@ describe("admin routes", () => {
       method: "PATCH",
       url: "/settings",
       headers: bearer(tokenFor(member)),
-      payload: { statutoryDays: 25 },
+      payload: { totalDays: 25 },
     });
     expect(memberRes.statusCode).toBe(403);
 
@@ -69,11 +69,11 @@ describe("admin routes", () => {
       method: "PATCH",
       url: "/settings",
       headers: bearer(tokenFor(admin)),
-      payload: { carryOverDeadline: "06-30", statutoryDays: 25 },
+      payload: { carryOverDeadline: "06-30", totalDays: 25 },
     });
     expect(good.statusCode).toBe(200);
     expect(good.json().carryOverDeadline).toBe("06-30");
-    expect(good.json().statutoryDays).toBe(25);
+    expect(good.json().totalDays).toBe(25);
   });
 
   it("GET /settings readable by a member", async () => {
@@ -85,7 +85,7 @@ describe("admin routes", () => {
       headers: bearer(tokenFor(member)),
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json().statutoryDays).toBe(20);
+    expect(res.json().totalDays).toBe(28);
   });
 
   it("POST /admin/users/invite calls the fake inviter; non-admin -> 403", async () => {
@@ -163,13 +163,13 @@ describe("admin routes", () => {
       method: "PATCH",
       url: "/settings",
       headers: bearer(tokenFor(admin)),
-      payload: { statutoryDays: 22 },
+      payload: { totalDays: 22 },
     });
     await app.inject({
       method: "PATCH",
       url: "/settings",
       headers: bearer(tokenFor(admin)),
-      payload: { statutoryDays: 23 },
+      payload: { totalDays: 23 },
     });
 
     const res = await app.inject({
@@ -180,7 +180,7 @@ describe("admin routes", () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].metadata.statutoryDays).toBe(23);
+    expect(body.items[0].metadata.totalDays).toBe(23);
     expect(body.nextCursor).toBeTruthy();
   });
 });

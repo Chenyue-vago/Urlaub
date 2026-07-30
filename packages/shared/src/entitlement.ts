@@ -97,17 +97,14 @@ export function countWorkDaysByYear(
   return result;
 }
 
-// 计算年度假期额度（法定 + 合同），按 config 参数化，替代原先硬编码常量
+// 计算年度假期额度（单一 28 天池），按 config 参数化。入职当年按月份比例缩减。
 export function getYearlyEntitlement(
   year: number,
   config: EntitlementConfig = DEFAULT_ENTITLEMENT,
   employmentStartDate?: string
-): { statutoryTotal: number; contractualTotal: number } {
+): { total: number } {
   if (!employmentStartDate) {
-    return {
-      statutoryTotal: config.statutoryDays,
-      contractualTotal: config.contractualDays,
-    };
+    return { total: config.totalDays };
   }
 
   const start = parseDate(employmentStartDate);
@@ -115,21 +112,15 @@ export function getYearlyEntitlement(
   const startMonthIndex = start.getMonth(); // 0-11
 
   if (year < startYear) {
-    return { statutoryTotal: 0, contractualTotal: 0 };
+    return { total: 0 };
   }
 
   if (year === startYear) {
     const monthsEligible = 12 - startMonthIndex;
-    return {
-      statutoryTotal: Math.ceil((config.statutoryDays * monthsEligible) / 12),
-      contractualTotal: Math.ceil((config.contractualDays * monthsEligible) / 12),
-    };
+    return { total: Math.ceil((config.totalDays * monthsEligible) / 12) };
   }
 
-  return {
-    statutoryTotal: config.statutoryDays,
-    contractualTotal: config.contractualDays,
-  };
+  return { total: config.totalDays };
 }
 
 export function calculateYearlyStats(
@@ -139,54 +130,46 @@ export function calculateYearlyStats(
   employmentStartDate?: string,
   config: EntitlementConfig = DEFAULT_ENTITLEMENT
 ): YearlyVacationStats {
-  // 筛选该年度的假期记录（确保类型一致）
+  // 筛选该年度的假期记录
   const yearRecords = records.filter(r => Number(r.year) === Number(year));
 
-  // 结转假期截止日期（默认当年3月31日，可通过 config.carryOverDeadline 覆盖）
+  // 结转假期截止日期（默认当年 12-31，可通过 config.carryOverDeadline 覆盖）。
+  // 结转天数必须在此日期前休完，之后过期。
   const carryOverDeadline = `${year}-${config.carryOverDeadline}`;
 
-  // 区分截止日前后的法定假期使用量（结转天数优先抵扣截止日前的假期）
-  let statutoryUsedBeforeDeadline = 0;
-  let statutoryUsedAfterDeadline = 0;
-  let contractualUsed = 0;
+  // 区分截止日前后的使用量（结转天数优先抵扣截止日前的假期）
+  let usedBeforeDeadline = 0;
+  let usedAfterDeadline = 0;
 
   yearRecords.forEach(record => {
-    if (record.type === 'statutory') {
-      if (record.startDate <= carryOverDeadline) {
-        statutoryUsedBeforeDeadline += record.workDays;
-      } else {
-        statutoryUsedAfterDeadline += record.workDays;
-      }
+    if (record.startDate <= carryOverDeadline) {
+      usedBeforeDeadline += record.workDays;
     } else {
-      contractualUsed += record.workDays;
+      usedAfterDeadline += record.workDays;
     }
   });
 
-  // 结转天数优先用于截止日前的假期，未用完部分截止日后过期
-  const carryOverUsed = Math.min(carryOverFromPreviousYear, statutoryUsedBeforeDeadline);
+  // 结转天数优先用于截止日前的假期，未用完部分在截止日后过期
+  const carryOverUsed = Math.min(carryOverFromPreviousYear, usedBeforeDeadline);
   const carryOverExpired = Math.max(0, carryOverFromPreviousYear - carryOverUsed);
-  const statutoryUsed = statutoryUsedBeforeDeadline + statutoryUsedAfterDeadline;
+  const used = usedBeforeDeadline + usedAfterDeadline;
 
-  // 计算剩余
-  const entitlement = getYearlyEntitlement(year, config, employmentStartDate);
-  const statutoryTotal = entitlement.statutoryTotal + carryOverFromPreviousYear;
-  const contractualTotal = entitlement.contractualTotal;
+  // 当年额度 + 结转 叠加为总可用
+  const { total } = getYearlyEntitlement(year, config, employmentStartDate);
+  const available = total + carryOverFromPreviousYear;
 
   return {
     year,
-    statutoryTotal,
-    contractualTotal,
-    statutoryUsed,
-    contractualUsed,
-    statutoryRemaining: Math.max(0, statutoryTotal - statutoryUsed - carryOverExpired),
-    contractualRemaining: Math.max(0, contractualTotal - contractualUsed),
+    total,
+    used,
+    remaining: Math.max(0, available - used - carryOverExpired),
     carryOver: carryOverFromPreviousYear,
     carryOverUsed,
     carryOverExpired,
   };
 }
 
-// 检查某个日期是否在结转有效期内（法定假期可结转到 config.carryOverDeadline，默认次年3月31日）
+// 检查某个日期是否在结转有效期内（结转到 config.carryOverDeadline，默认次年 12-31）
 export function isWithinCarryOverPeriod(
   originalYear: number,
   currentDate: Date,
@@ -197,14 +180,26 @@ export function isWithinCarryOverPeriod(
   return currentDate <= carryOverDeadline;
 }
 
-// 计算结转假期（法定假期因病未休可结转15个月）
+// 计算结转到下一年的假期。规则（不链式结转）：只有当年【基础额度】未用完的
+// 部分能滚到下一年；从上一年结转进来的天数（`carryInFromPreviousYear`）当年
+// 不用就在截止日过期，不再向后链式结转。由于申请优先消耗结转（见
+// `allocateLeaveDays`），当年用量先抵扣结转额度，剩余用量才抵扣基础额度。
+// 因此：基础额度已用 = max(0, used − carryOverUsed)，结转出去 = total − 该值。
+// 无天数上限。
 export function calculateCarryOver(
   records: VacationRecord[],
   fromYear: number,
   employmentStartDate?: string,
-  config: EntitlementConfig = DEFAULT_ENTITLEMENT
+  config: EntitlementConfig = DEFAULT_ENTITLEMENT,
+  carryInFromPreviousYear: number = 0
 ): number {
-  const stats = calculateYearlyStats(records, fromYear, 0, employmentStartDate, config);
-  // 只有法定假期可以结转
-  return stats.statutoryRemaining;
+  const stats = calculateYearlyStats(
+    records,
+    fromYear,
+    carryInFromPreviousYear,
+    employmentStartDate,
+    config
+  );
+  const baseUsed = Math.max(0, stats.used - stats.carryOverUsed);
+  return Math.max(0, stats.total - baseUsed);
 }

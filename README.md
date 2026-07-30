@@ -2,9 +2,10 @@
 
 Request and manage your vacation days online. Employees submit leave requests,
 admins approve or reject them, and everyone can see who's off on the shared team
-calendar. Vacation days are calculated by German rules automatically — statutory
-and contractual days, your state's public holidays, a pro-rated first year, and
-carry-over into the next year.
+calendar. Everyone gets a single yearly allowance of **28 vacation days**
+(pro-rated for your first year), and the app handles the German specifics
+automatically — your state's public holidays and weekends are never counted, and
+any unused days carry over into the next year.
 
 ## Open the app
 
@@ -21,17 +22,26 @@ used to pro-rate your vacation entitlement for your joining year, so enter it
 accurately.
 
 **See your balance**
-Your dashboard shows, for the selected year, how many vacation days you're
-entitled to, how many you've used or reserved, and how many are left. Carry-over
-from the previous year is included automatically.
+Your dashboard shows, for the selected year, your total available days, how many
+you've used or reserved, and how many are left. Your total is the 28-day yearly
+allowance **plus** any days carried over from the previous year (e.g. 28 + 9
+carried over = 37 available). Carried-over days are marked as such and, being
+use-it-or-lose-it, are always spent first.
+
+**Carry-over rules**
+Days you don't use roll into the next year and must be taken by **December 31**
+of that year, or they expire. Carry-over does not stack indefinitely: only your
+regular 28-day allowance rolls forward — days that were themselves carried over
+don't carry a second time.
 
 **Request vacation**
 1. Click **Request Vacation** and pick your start and end dates.
-2. Submit. You only choose the dates — the system automatically decides which
-   day buckets to use (soonest-to-expire first: carried-over statutory →
-   contractual → base statutory). You never pick a "type".
+2. Submit. You only choose the dates — there are no vacation "types" to pick.
+   The system draws from your perishable carried-over days first, then your
+   regular allowance, so use-it-or-lose-it days are never wasted.
 3. Your request appears as **pending** and the days are reserved from your
-   balance right away.
+   balance right away. Days that consume carry-over are labelled **Carry-over**
+   in your records so it's clear which are which.
 
 Notes:
 - Public holidays and weekends in your state are not counted as vacation days.
@@ -59,10 +69,8 @@ Admins get everything above, plus:
   that crosses a year boundary is shown as one linked group and decided together.
 - **Users** — see each person's leave records (valid pending/approved leave;
   rejected entries are kept for audit, cancelled ones are excluded).
-- **Settings** — view and adjust the statutory/contractual day defaults and the
-  carry-over deadline.
-- **Audit log** — every approve/reject/cancel/settings change is recorded. Click
-  a row to see who did what, on which dates.
+- **Audit log** — every approve, reject, and cancel is recorded. Click a row to
+  see who did what, on which dates.
 
 New users always start as a regular **member**. Becoming an admin is done by an
 existing admin (or, for the very first admin, directly in the database).

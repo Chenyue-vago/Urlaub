@@ -7,8 +7,7 @@ import { AppError } from "../src/lib/errors.js";
 
 describe("createLeave", () => {
   it("member request within balance → pending rows, balance reserved", async () => {
-    // contractualDays:0 so auto-allocation draws purely from statutory here.
-    await makeSettings({ statutoryDays: 20, contractualDays: 0 });
+    await makeSettings({ totalDays: 20 });
     const user = await makeUser({ employmentStartDate: "2025-01-01" });
     const group = await createLeave({
       actor: { id: user.id, role: "member" },
@@ -24,12 +23,12 @@ describe("createLeave", () => {
     expect(group[0].decidedById).toBeNull();
 
     const bal = await getBalance(prisma, user.id, 2025);
-    expect(bal.statutory.used).toBe(2);
-    expect(bal.statutory.available).toBe(18);
+    expect(bal.used).toBe(2);
+    expect(bal.available).toBe(18);
   });
 
   it("request exceeding available → throws insufficient_balance, nothing created", async () => {
-    await makeSettings({ statutoryDays: 2, contractualDays: 0 });
+    await makeSettings({ totalDays: 2 });
     const user = await makeUser({ employmentStartDate: "2025-01-01" });
 
     await expect(
@@ -46,7 +45,7 @@ describe("createLeave", () => {
   });
 
   it("cross-year request → 2 rows sharing groupId, correct per-year workDays", async () => {
-    await makeSettings({ statutoryDays: 20, contractualDays: 0 });
+    await makeSettings({ totalDays: 20 });
     const user = await makeUser({ employmentStartDate: "2020-01-01" });
     const group = await createLeave({
       actor: { id: user.id, role: "member" },
@@ -70,10 +69,10 @@ describe("createLeave", () => {
     }
 
     // both years are charged
-    expect((await getBalance(prisma, user.id, 2025)).statutory.used).toBe(
+    expect((await getBalance(prisma, user.id, 2025)).used).toBe(
       segments.find((s) => s.year === 2025)!.days
     );
-    expect((await getBalance(prisma, user.id, 2026)).statutory.used).toBe(
+    expect((await getBalance(prisma, user.id, 2026)).used).toBe(
       segments.find((s) => s.year === 2026)!.days
     );
   });
@@ -115,8 +114,8 @@ describe("createLeave", () => {
   });
 
   it("concurrency: parallel requests that ALL fit → all succeed (retry absorbs conflicts)", async () => {
-    // 20 statutory days, 0 contractual; four disjoint 2-day requests = 8 ≤ 20.
-    await makeSettings({ statutoryDays: 20, contractualDays: 0 });
+    // 20-day pool; four disjoint 2-day requests = 8 ≤ 20.
+    await makeSettings({ totalDays: 20 });
     const user = await makeUser({ employmentStartDate: "2025-01-01" });
 
     const mk = (start: string, end: string) =>
@@ -137,12 +136,12 @@ describe("createLeave", () => {
     expect(results.every((r) => r.status === "fulfilled")).toBe(true);
 
     const bal = await getBalance(prisma, user.id, 2025);
-    expect(bal.statutory.used).toBe(8);
+    expect(bal.used).toBe(8);
     expect(await prisma.leaveRequest.count()).toBe(4);
   });
 
   it("concurrency: two parallel requests that together exceed balance → exactly one succeeds", async () => {
-    await makeSettings({ statutoryDays: 3, contractualDays: 0 });
+    await makeSettings({ totalDays: 3 });
     const user = await makeUser({ employmentStartDate: "2025-01-01" });
 
     const mk = (start: string, end: string) =>
@@ -165,7 +164,7 @@ describe("createLeave", () => {
     expect(rejected).toHaveLength(1);
 
     const bal = await getBalance(prisma, user.id, 2025);
-    expect(bal.statutory.used).toBeLessThanOrEqual(3); // never over-allocated
-    expect(bal.statutory.used).toBe(2);
+    expect(bal.used).toBeLessThanOrEqual(3); // never over-allocated
+    expect(bal.used).toBe(2);
   });
 });

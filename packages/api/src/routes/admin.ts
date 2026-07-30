@@ -24,8 +24,7 @@ const patchUserBodySchema = z.object({
 });
 
 const patchSettingsBodySchema = z.object({
-  statutoryDays: z.number().int().positive().optional(),
-  contractualDays: z.number().int().nonnegative().optional(),
+  totalDays: z.number().int().positive().optional(),
   carryOverDeadline: z
     .string()
     .regex(/^\d{2}-\d{2}$/)

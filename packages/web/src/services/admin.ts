@@ -25,8 +25,7 @@ export interface UpdateUserPayload {
 }
 
 export interface UpdateSettingsPayload {
-  statutoryDays?: number;
-  contractualDays?: number;
+  totalDays?: number;
   carryOverDeadline?: string;
 }
 
