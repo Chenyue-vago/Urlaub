@@ -159,7 +159,7 @@ const zh: Dict = {
   'admin.viewRecords': '记录',
   'admin.recordsOf': '假期记录 — {email}',
   'admin.noRecords': '暂无记录',
-  'admin.usageSummary': '已用 {used} 天',
+  'admin.usageSummary': '已用 {used}/{total} 天',
   'admin.close': '关闭',
 
   'admin.inviteTitle': '邀请新用户',
@@ -357,7 +357,7 @@ const en: Dict = {
   'admin.viewRecords': 'Records',
   'admin.recordsOf': 'Vacation records — {email}',
   'admin.noRecords': 'No records',
-  'admin.usageSummary': '{used} days used',
+  'admin.usageSummary': '{used}/{total} days used',
   'admin.close': 'Close',
 
   'admin.inviteTitle': 'Invite a new user',

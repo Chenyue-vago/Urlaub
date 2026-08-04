@@ -7,10 +7,20 @@ import { LanguageProvider } from './i18n'
 import { ClerkProviderWrapper, AuthGate } from './lib/clerk'
 import { queryClient } from './queryClient'
 import { ToastProvider } from './components/Toast'
+import { Sentry, initSentry } from './sentry'
 import './index.css'
+
+initSentry() // before render so it can instrument the app
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <Sentry.ErrorBoundary
+      fallback={
+        <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
+          <p>Something went wrong. Please reload the page.</p>
+        </div>
+      }
+    >
     <ClerkProviderWrapper>
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
@@ -26,5 +36,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </LanguageProvider>
       </QueryClientProvider>
     </ClerkProviderWrapper>
+    </Sentry.ErrorBoundary>
   </React.StrictMode>
 )

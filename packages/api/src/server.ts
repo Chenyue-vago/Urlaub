@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import { env } from "./env.js";
+import { Sentry, initSentry } from "./sentry.js";
 import { registerErrorHandler } from "./lib/errors.js";
 import { ClerkAuthenticator } from "./auth/clerk.js";
 import type { Authenticator } from "./auth/types.js";
@@ -24,6 +25,11 @@ export function buildServer(opts: BuildServerOptions = {}): FastifyInstance {
   app.decorate("authenticator", opts.authenticator ?? new ClerkAuthenticator());
   app.decorate("inviter", opts.inviter ?? new ClerkInviter());
 
+  // When Sentry is initialised (real startup with a DSN), let it capture
+  // unhandled errors before our own handler turns them into a 500 response.
+  if (env.SENTRY_DSN) {
+    Sentry.setupFastifyErrorHandler(app);
+  }
   registerErrorHandler(app);
 
   app.get("/health", async () => {
@@ -40,6 +46,7 @@ export function buildServer(opts: BuildServerOptions = {}): FastifyInstance {
 }
 
 export async function start(): Promise<void> {
+  initSentry(); // before buildServer so instrumentation wraps the app
   const app = buildServer();
   await app.listen({ port: env.PORT, host: "0.0.0.0" });
 }

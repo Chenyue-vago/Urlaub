@@ -16,18 +16,19 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "fastify": "^4.28.1",
+    "@clerk/backend": "^1.13.10",
     "@fastify/cors": "^9.0.1",
     "@prisma/client": "^5.19.1",
+    "@sentry/node": "^10.69.0",
     "@urlaub/shared": "*",
-    "@clerk/backend": "^1.13.10",
+    "fastify": "^4.28.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/node": "^20.14.15",
     "prisma": "^5.19.1",
     "tsx": "^4.19.1",
     "typescript": "^5.3.3",
-    "vitest": "^4.1.8",
-    "@types/node": "^20.14.15"
+    "vitest": "^4.1.8"
   }
 }
