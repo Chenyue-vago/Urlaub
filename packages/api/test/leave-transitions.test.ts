@@ -6,7 +6,23 @@ import { AppError } from "../src/lib/errors.js";
 
 // Transition tests assert against the single 28-day pool; pin totalDays:20 for
 // stable arithmetic.
-async function pendingGroup(userId: string, start = "2026-08-03", end = "2026-08-04") {
+//
+// Default dates are computed RELATIVE to today so the group is always in the
+// future: members may only cancel a vacation that has not started yet
+// (leave.ts), so a hard-coded date silently turns into a "cannot cancel a
+// started vacation" failure once real time passes it — a time-bomb that broke
+// CI on 2026-08-04. Keep these dynamic.
+function isoDaysFromToday(days: number): string {
+  const d = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+async function pendingGroup(
+  userId: string,
+  start = isoDaysFromToday(30),
+  end = isoDaysFromToday(31)
+) {
   await makeSettings({ totalDays: 20 });
   return createLeave({
     actor: { id: userId, role: "member" },
